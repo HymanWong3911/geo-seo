@@ -5,6 +5,7 @@ WORKDIR /app
 FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 COPY package.json pnpm-lock.yaml* ./
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 RUN corepack enable && pnpm install --frozen-lockfile
 
 # ---- builder ----
