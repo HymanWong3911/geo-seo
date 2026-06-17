@@ -9,10 +9,17 @@ export type SearchProviderName =
   | "doubao"
   | "llm_simulation";
 
+export interface SearchMeta {
+  projectId?: string;
+  geoRunId?: string;
+  geoQuestionId?: string;
+}
+
 export interface SearchOptions {
   language: string;
   region: string;
   maxAnswerChars?: number;
+  meta?: SearchMeta;
 }
 
 export interface SearchResult {

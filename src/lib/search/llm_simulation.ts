@@ -49,6 +49,8 @@ ${options.region ? `地区：${options.region}` : ""}
       const answer = await trackLLMCallWithUsage(
         {
           jobType: "llm-fallback",
+          projectId: options.meta?.projectId ?? null,
+          geoRunId: options.meta?.geoRunId ?? null,
           provider: llm.name,
           model: process.env.DEFAULT_LLM_MODEL ?? "unknown",
         },

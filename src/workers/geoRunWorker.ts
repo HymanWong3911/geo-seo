@@ -176,6 +176,7 @@ export async function runGeoRunSync(job: GeoRunJob): Promise<{
         question.question,
         question.language,
         question.region,
+        run.id,
       );
 
       // LLM 分析

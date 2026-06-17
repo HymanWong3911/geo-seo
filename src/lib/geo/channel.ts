@@ -21,6 +21,7 @@ export async function runGeoQuestion(
   questionText: string,
   language: string,
   region: string,
+  geoRunId?: string,
 ): Promise<{
   result: SearchResult;
   provider: SearchProviderName;
@@ -28,6 +29,8 @@ export async function runGeoQuestion(
 }> {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) throw new Error(`Project not found: ${projectId}`);
+
+  const meta = { projectId, geoRunId, geoQuestionId: questionId };
 
   // 优先级：项目配置的渠道 ∩ 实际可用的渠道（已配 key）
   // 没配 key 的渠道会被跳过（避免进入 5 次重试 + 7.5 分钟退避）
@@ -47,6 +50,7 @@ export async function runGeoQuestion(
       language,
       region,
       maxAnswerChars: parseInt(process.env.GEO_ANSWER_MAX_CHARS ?? "8000"),
+      meta,
     });
     return { result, provider: "llm_simulation", attempts: 0 };
   }
@@ -60,6 +64,7 @@ export async function runGeoQuestion(
           language,
           region,
           maxAnswerChars: parseInt(process.env.GEO_ANSWER_MAX_CHARS ?? "8000"),
+          meta,
         });
         return { result, provider: channelName, attempts: attempt };
       } catch (err) {
@@ -78,6 +83,7 @@ export async function runGeoQuestion(
     language,
     region,
     maxAnswerChars: parseInt(process.env.GEO_ANSWER_MAX_CHARS ?? "8000"),
+    meta,
   });
   return { result, provider: "llm_simulation", attempts: 0 };
 }
