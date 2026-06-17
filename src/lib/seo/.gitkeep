@@ -1,0 +1,4 @@
+// SEO 分析器占位。
+// 按 dev doc 18.1 拆分：title / description / headings / indexability /
+// canonical / images / links / schema / content。
+export {};

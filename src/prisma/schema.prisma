@@ -1,0 +1,768 @@
+// Prisma schema for GEO + SEO Search Visibility Console
+// 数据模型来源：dev doc v1.1 第 8 节
+// 与 v1.0 的差异：+4 个 model、+5 个 enum、User 加 passwordHash/active/lastLoginAt、
+// Project 加 status/geoDailyEnabled、GeoRun 加 projectId 关联 + triggerType/retryCount
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============= 枚举 =============
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum ProjectRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum SearchIntent {
+  INFORMATIONAL
+  COMMERCIAL
+  TRANSACTIONAL
+  NAVIGATIONAL
+  LOCAL
+  COMPARISON
+}
+
+enum TaskSource {
+  SEO_AUDIT
+  GEO_RUN
+  CONTENT_ANALYSIS
+  MANUAL
+}
+
+enum TaskStatus {
+  TODO
+  DOING
+  REVIEW
+  DONE
+  IGNORED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  PARTIAL_FAILURE
+}
+
+enum AuditAction {
+  USER_LOGIN
+  USER_LOGOUT
+  USER_LOGIN_FAILED
+  USER_PASSWORD_CHANGED
+  USER_PASSWORD_RESET
+  USER_CREATED
+  USER_UPDATED
+  USER_DISABLED
+  USER_ENABLED
+  PROJECT_CREATE
+  PROJECT_UPDATE
+  PROJECT_ARCHIVE
+  PROJECT_MEMBER_ADD
+  PROJECT_MEMBER_UPDATE
+  PROJECT_MEMBER_REMOVE
+  KEYWORD_CREATE
+  KEYWORD_UPDATE
+  KEYWORD_DELETE
+  KEYWORD_IMPORTED
+  GEO_QUESTION_CREATE
+  GEO_QUESTION_UPDATE
+  GEO_QUESTION_DELETE
+  GEO_RUN_TRIGGER
+  GEO_RUN_AUTO_SCHEDULED
+  PAGE_AUDIT_TRIGGER
+  CONTENT_ANALYSIS_TRIGGER
+  TASK_CREATE
+  TASK_UPDATE
+  TASK_DELETE
+  REPORT_EXPORT
+  DATA_DELETE
+  SETTINGS_UPDATE
+  ALERT_CHANNEL_UPDATE
+  BRAND_CREATE
+  BRAND_UPDATE
+  BRAND_DELETE
+  COMPETITOR_CREATE
+  COMPETITOR_UPDATE
+  COMPETITOR_DELETE
+}
+
+enum AlertChannelType {
+  FEISHU
+  WECOM
+  EMAIL
+}
+
+enum AlertEventType {
+  GEO_RUN_FAILED
+  DAILY_GEO_SUMMARY
+  ANOMALY_DETECTED
+}
+
+// ============= 用户与权限 =============
+
+model User {
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  name                 String?
+  passwordHash         String?
+  role                 UserRole  @default(MEMBER)
+  active               Boolean   @default(true)
+  lastLoginAt          DateTime?
+  mustChangePassword   Boolean   @default(false)
+  lastPasswordChangeAt DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  memberships UserProject[]
+  auditLogs   AuditLog[]
+  resetTokens PasswordResetToken[]
+
+  @@index([email])
+  @@index([active])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model UserProject {
+  id        String      @id @default(cuid())
+  userId    String
+  projectId String
+  role      ProjectRole @default(VIEWER)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([projectId])
+}
+
+// ============= 业务核心 =============
+
+model Project {
+  id              String        @id @default(cuid())
+  name            String
+  domain          String
+  primaryBrand    String
+  language        String        @default("zh-CN")
+  region          String        @default("CN")
+  sitemapUrl      String?
+  robotsUrl       String?
+  status          ProjectStatus @default(ACTIVE)
+  geoDailyEnabled Boolean       @default(true)
+  geoChannels     String[]      @default(["perplexity", "kimi", "doubao"])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  archivedAt      DateTime?
+
+  brands       Brand[]
+  competitors  Competitor[]
+  pages        Page[]
+  keywords     Keyword[]
+  geoQuestions GeoQuestion[]
+  tasks        OptimizationTask[]
+  geoRuns      GeoRun[]
+  members      UserProject[]
+  contentDrafts ContentDraft[]
+  cmsIntegrations CmsIntegration[]
+  distributionTargets DistributionTarget[]
+  keywordExpansions KeywordExpansion[]
+  brandMentions BrandMention[]
+  reports      Report[]
+
+  @@index([status])
+}
+
+model Brand {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  aliases     String[]
+  products    String[]
+  description String?
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Competitor {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  domain    String?
+  aliases   String[]
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Page {
+  id            String    @id @default(cuid())
+  projectId     String
+  url           String
+  title         String?
+  description   String?
+  h1            String?
+  wordCount     Int?
+  lastCrawledAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  audits  PageAudit[]
+
+  @@unique([projectId, url])
+  @@index([projectId])
+}
+
+model PageAudit {
+  id          String   @id @default(cuid())
+  pageId      String
+  score       Int
+  statusCode  Int?
+  indexable   Boolean?
+  findings    Json
+  rawSnapshot Json?
+  createdAt   DateTime @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, createdAt])
+}
+
+model Keyword {
+  id        String        @id @default(cuid())
+  projectId String
+  text      String
+  language  String        @default("zh-CN")
+  region    String        @default("CN")
+  intent    SearchIntent
+  priority  Int           @default(3)
+  targetUrl String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model GeoQuestion {
+  id         String        @id @default(cuid())
+  projectId  String
+  question   String
+  language   String        @default("zh-CN")
+  region     String        @default("CN")
+  intent     SearchIntent
+  priority   Int           @default(3)
+  keywordIds String[]
+  active     Boolean       @default(true)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  runs    GeoRunResult[]
+
+  @@index([projectId, active])
+}
+
+// ============= GEO 监测 =============
+
+model GeoRun {
+  id           String    @id @default(cuid())
+  projectId    String
+  triggerType  String    // "MANUAL" | "SCHEDULED" | "RETRY"
+  provider     String
+  model        String
+  status       JobStatus @default(PENDING)
+  questionIds  String[]
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  retryCount   Int       @default(0)
+  errorMessage String?
+  createdAt    DateTime  @default(now())
+
+  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  results GeoRunResult[]
+
+  @@index([projectId, createdAt])
+  @@index([status, createdAt])
+}
+
+model GeoRunResult {
+  id                      String   @id @default(cuid())
+  geoRunId                String
+  geoQuestionId           String
+  answer                  String   @db.Text
+  providerSource          String   // "perplexity" | "kimi" | "doubao" | "llm_simulation"
+  providerAttempts        Int      @default(1)
+  citedUrls               String[]
+  mentionedBrands         String[]
+  mentionedCompetitors    String[]
+  primaryBrandMentioned   Boolean  @default(false)
+  primaryBrandRecommended Boolean  @default(false)
+  sentiment               String?
+  position                Int?
+  links                   String[]
+  analysis                Json
+  createdAt               DateTime @default(now())
+
+  geoRun      GeoRun      @relation(fields: [geoRunId], references: [id], onDelete: Cascade)
+  geoQuestion GeoQuestion @relation(fields: [geoQuestionId], references: [id], onDelete: Cascade)
+
+  @@index([geoRunId])
+  @@index([geoQuestionId, createdAt])
+  @@index([providerSource, createdAt])
+}
+
+// ============= 任务 =============
+
+model OptimizationTask {
+  id          String     @id @default(cuid())
+  projectId   String
+  title       String
+  description String?
+  sourceType  TaskSource
+  sourceId    String?
+  url         String?
+  priority    Int        @default(3)
+  status      TaskStatus @default(TODO)
+  assignee    String?
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+}
+
+// ============= 审计日志（v1.1 新增）============
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  userId     String?
+  action     AuditAction
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId, createdAt])
+}
+
+// ============= LLM 调用记录（v1.1 新增）============
+
+model LlmCall {
+  id               String   @id @default(cuid())
+  projectId        String?
+  geoRunId         String?
+  jobType          String   // "real-search" | "llm-fallback" | "geo-analysis" | "content-analysis" | "report-generation"
+  provider         String
+  model            String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  costCents        Decimal  @default(0) @db.Decimal(10, 4)
+  durationMs       Int      @default(0)
+  success          Boolean  @default(true)
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([geoRunId])
+  @@index([createdAt])
+  @@index([jobType, createdAt])
+}
+
+// ============= 告警通道（v1.1 新增）============
+
+model AlertChannel {
+  id        String           @id @default(cuid())
+  name      String
+  type      AlertChannelType
+  config    Json
+  active    Boolean          @default(true)
+  events    AlertEventType[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  eventsLog AlertEvent[]
+
+  @@index([active])
+}
+
+model AlertEvent {
+  id           String         @id @default(cuid())
+  channelId    String
+  eventType    AlertEventType
+  payload      Json
+  status       JobStatus      @default(PENDING)
+  sentAt       DateTime?
+  errorMessage String?
+  createdAt    DateTime       @default(now())
+
+  channel AlertChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([channelId, createdAt])
+  @@index([status, createdAt])
+}
+
+// ============= v1.2 内容工作流 =============
+
+enum ContentDraftStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ContentSource {
+  AI_GENERATED
+  AI_REWRITTEN
+  MANUAL
+  IMPORTED
+}
+
+model ContentDraft {
+  id               String             @id @default(cuid())
+  projectId        String
+  title            String
+  content          String             @db.Text
+  contentFormat    String             @default("html")
+  excerpt          String?
+  metaTitle        String?
+  metaDescription  String?
+  slug             String?
+  sourceType       ContentSource
+  sourcePrompt     String?
+  targetUrl        String?
+  targetKeywords   String[]
+  status           ContentDraftStatus @default(DRAFT)
+  authorId         String
+  reviewerId       String?
+  reviewNotes      String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  submittedAt      DateTime?
+  reviewedAt       DateTime?
+  publishedAt      DateTime?
+
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisions ContentRevision[]
+  reviews   ContentReview[]
+  publishLog PublishLog?
+  distributionLogs DistributionLog[]
+
+  @@index([projectId, status])
+  @@index([authorId, createdAt])
+  @@index([status, updatedAt])
+}
+
+model ContentRevision {
+  id              String   @id @default(cuid())
+  draftId         String
+  version         Int
+  title           String
+  content         String   @db.Text
+  contentFormat   String   @default("html")
+  excerpt         String?
+  metaTitle       String?
+  metaDescription String?
+  changeNote      String?
+  createdById     String
+  createdAt       DateTime @default(now())
+
+  draft ContentDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@unique([draftId, version])
+}
+
+model ContentReview {
+  id         String   @id @default(cuid())
+  draftId    String
+  reviewerId String
+  decision   String
+  comments   String?
+  createdAt  DateTime @default(now())
+
+  draft ContentDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@index([draftId, createdAt])
+}
+
+model CmsIntegration {
+  id         String   @id @default(cuid())
+  projectId  String
+  name       String
+  type       String   @default("self-hosted")
+  baseUrl    String
+  apiKeyHash String
+  config     Json?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  publishLogs PublishLog[]
+
+  @@index([projectId, active])
+}
+
+model PublishLog {
+  id               String    @id @default(cuid())
+  draftId          String    @unique
+  cmsIntegrationId String
+  externalId       String?
+  externalUrl      String?
+  status           JobStatus @default(PENDING)
+  attempts         Int       @default(0)
+  errorMessage     String?
+  publishedAt      DateTime?
+  rolledBackAt     DateTime?
+  rollbackReason   String?
+  createdAt        DateTime  @default(now())
+
+  draft           ContentDraft   @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  cmsIntegration  CmsIntegration @relation(fields: [cmsIntegrationId], references: [id])
+
+  @@index([status, createdAt])
+}
+
+// ============= v1.2 跨平台分发 =============
+
+enum DistributionPlatform {
+  // 社交平台
+  ZHIHU
+  WECHAT_MP
+  FEISHU_DOC
+  NOTION
+  CUSTOM_WEBHOOK
+  // 内容平台
+  BAIJIAHAO         // 百家号
+  DOUYIN            // 抖音
+  XIAOHONGSHU       // 小红书
+  // AI 智能体
+  COZE              // 字节扣子
+  BAIDU_WENXIN      // 百度文心
+  TENCENT_YUANBAO   // 腾讯元宝
+  DINGTALK          // 钉钉
+  // 搜索引擎提交
+  BAIDU_SEARCH      // 百度搜索
+  SOGOU_SEARCH      // 搜狗搜索
+  SO360_SEARCH      // 360搜索
+  SHENMA_SEARCH     // 神马搜索
+  // 引用/收录站点
+  CITATION_SITE     // 引用站点
+  INDEX_SITE        // 收录站点
+}
+
+model DistributionTarget {
+  id        String              @id @default(cuid())
+  projectId String
+  platform  DistributionPlatform
+  name      String
+  config    Json?
+  active    Boolean             @default(true)
+  // 发布模式：MANUAL=手动发布, AUTO=自动发布(审核通过后自动发)
+  publishMode String             @default("MANUAL")
+  // 自动发布触发条件：APPROVED=审核通过后, PUBLISHED=已发布后
+  autoPublishOn String             @default("APPROVED")
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  project Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  logs    DistributionLog[]
+
+  @@index([projectId, active])
+}
+
+model DistributionLog {
+  id           String    @id @default(cuid())
+  targetId     String
+  draftId      String?
+  status       JobStatus @default(PENDING)
+  externalId   String?
+  externalUrl  String?
+  attempts     Int       @default(0)
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  target     DistributionTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  draft      ContentDraft?      @relation(fields: [draftId], references: [id], onDelete: SetNull)
+
+  @@index([targetId, createdAt])
+  @@index([status, createdAt])
+}
+
+// ============= v1.2 关键词扩展 =============
+
+model KeywordExpansion {
+  id               String        @id @default(cuid())
+  projectId        String
+  seedKeywordId    String?
+  seedKeywordText  String
+  expandedText     String
+  searchVolume     Int?
+  difficulty       Int?
+  intent           SearchIntent?
+  status           String        @default("SUGGESTED")
+  createdAt        DateTime      @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+}
+
+// ============= v1.2 品牌监控 =============
+
+model BrandMention {
+  id             String   @id @default(cuid())
+  projectId      String
+  source         String
+  sourceUrl      String
+  title          String
+  content        String   @db.Text
+  mentionType    String
+  brandName      String
+  sentiment      String?
+  publishedAt    DateTime
+  discoveredAt   DateTime @default(now())
+  relevanceScore Int?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sourceUrl], name: "uniq_project_sourceUrl")
+  @@index([projectId, discoveredAt])
+  @@index([source, discoveredAt])
+  @@index([brandName, publishedAt])
+}
+
+// ============= v1.2 协作 =============
+
+model Comment {
+  id         String   @id @default(cuid())
+  targetType String
+  targetId   String
+  authorId   String
+  content    String   @db.Text
+  mentions   String[]
+  parentId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([targetType, targetId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+// ============= 报告（v1.2 新增）============
+
+enum ReportType {
+  WEEKLY
+  MONTHLY
+  AUDIT
+}
+
+model Report {
+  id          String      @id @default(cuid())
+  projectId   String
+  type        ReportType
+  periodFrom  DateTime
+  periodTo    DateTime
+  auditId     String?                                  // AUDIT 类型关联
+  content     String      @db.Text                    // Markdown 内容
+  generatedBy String?                                 // userId
+  createdAt   DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type, createdAt])
+}
+
+// ============= 通知（v1.2 新增）============
+enum NotificationType {
+  COMMENT_MENTION         // 有人 @ 提到我
+  COMMENT_REPLY           // 有人回复我的评论
+  TASK_ASSIGNED           // 任务被分配
+  TASK_DUE_SOON           // 任务快到期
+  GEO_ANOMALY             // GEO 异常（提及率突降等）
+  DRAFT_APPROVED          // 草稿通过审核
+  DRAFT_REJECTED          // 草稿被驳回
+  SYSTEM                  // 系统通知
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  type       NotificationType
+  title      String
+  content    String?          // 长内容（可选）
+  link       String?          // 跳转链接
+  metadata   Json?            // 任意元数据
+  read       Boolean          @default(false)
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, read, createdAt])
+  @@index([createdAt])
+}
+
+// 通知偏好设置（每个用户、每种类型）
+model NotificationPreference {
+  id              String           @id @default(cuid())
+  userId          String
+  type            NotificationType
+  channelInApp    Boolean          @default(true)   // 站内
+  channelEmail    Boolean          @default(false)  // 邮件
+  channelFeishu   Boolean          @default(false)
+  channelWeCom    Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([userId, type])
+  @@index([userId])
+}

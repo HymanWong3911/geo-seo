@@ -1,0 +1,3 @@
+// 页面抓取占位。
+// Playwright 渲染 + cheerio 解析 + robots-parser。
+export {};

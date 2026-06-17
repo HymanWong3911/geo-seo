@@ -1,0 +1,3 @@
+// 表格组件占位。
+// 计划使用 TanStack Table：关键词、GEO 问题、诊断、任务列表。
+export {};

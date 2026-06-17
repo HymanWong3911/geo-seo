@@ -1,0 +1,3 @@
+// 状态组件占位。
+// loading / empty / error / success / running / failed 统一处理。
+export {};
