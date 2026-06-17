@@ -65,6 +65,8 @@ export const pageAuditWorker = new Worker<PageAuditJob>(
         rawSnapshot: {
           ...analysis.snapshot,
           crawlMethod: crawl.method,
+          crawlErrors: crawl.errors,
+          crawlElapsedMs: crawl.elapsedMs,
         } as unknown as Prisma.InputJsonValue,
       },
     });
@@ -134,7 +136,12 @@ export async function runPageAuditSync(
       statusCode: crawl.statusCode,
       indexable: analysis.indexable,
       findings: analysis.findings as unknown as Prisma.InputJsonValue,
-      rawSnapshot: { ...analysis.snapshot, crawlMethod: crawl.method } as unknown as Prisma.InputJsonValue,
+      rawSnapshot: {
+        ...analysis.snapshot,
+        crawlMethod: crawl.method,
+        crawlErrors: crawl.errors,
+        crawlElapsedMs: crawl.elapsedMs,
+      } as unknown as Prisma.InputJsonValue,
     },
   });
   await audit("PAGE_AUDIT_TRIGGER", {
@@ -145,6 +152,7 @@ export async function runPageAuditSync(
       projectId, url: crawl.finalUrl, statusCode: crawl.statusCode,
       score: analysis.score, findingsCount: analysis.findings.length,
       triggerType, crawlMethod: crawl.method, sync: true,
+      crawlErrors: crawl.errors,
     },
   });
   return {
