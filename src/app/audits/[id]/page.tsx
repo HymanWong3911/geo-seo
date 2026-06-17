@@ -14,6 +14,19 @@ interface Finding {
   expectedValue?: string | number | null;
 }
 
+interface Recommendation {
+  code: string;
+  title: string;
+  priority: 1 | 2 | 3;
+  impact: "high" | "medium" | "low";
+  effort: "low" | "medium" | "high";
+  category: "content" | "technical" | "performance" | "links" | "metadata";
+  description: string;
+  steps: string[];
+  codeExample?: string;
+  expectedBenefit: string;
+}
+
 interface AuditDetail {
   id: string;
   score: number;
@@ -39,6 +52,8 @@ interface AuditDetail {
       tbt: number;
     };
     crawlMethod?: string;
+    crawlErrors?: Array<{ phase: string; kind: string; message: string }>;
+    crawlElapsedMs?: number;
   };
   createdAt: string;
   page: {
@@ -74,15 +89,24 @@ export default function AuditDetailPage() {
   const [error, setError] = useState("");
   const [creatingTasks, setCreatingTasks] = useState(false);
   const [taskResult, setTaskResult] = useState<{ recommendations: number; tasks: number } | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch(`/api/audits/${params.id}`);
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json?.error?.message ?? "加载失败");
+      const [auditRes, recRes] = await Promise.all([
+        fetch(`/api/audits/${params.id}`),
+        fetch(`/api/audits/${params.id}/recommendations`),
+      ]);
+      const auditJson = await auditRes.json();
+      if (!auditRes.ok) {
+        setError(auditJson?.error?.message ?? "加载失败");
       } else {
-        setAudit(json.data);
+        setAudit(auditJson.data);
+      }
+      if (recRes.ok) {
+        const recJson = await recRes.json();
+        setRecommendations(recJson.data?.recommendations ?? []);
       }
       setLoading(false);
     })();
@@ -180,6 +204,30 @@ export default function AuditDetailPage() {
         </div>
       )}
 
+      {/* 抓取错误（如有） */}
+      {audit.rawSnapshot.crawlErrors && audit.rawSnapshot.crawlErrors.length > 0 && (
+        <div className="card p-4 border-warning/50 bg-warning/5">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="eyebrow text-warning">crawl_errors · {audit.rawSnapshot.crawlErrors.length}</h3>
+            {audit.rawSnapshot.crawlMethod && (
+              <span className="badge badge-warning text-[10px]">method: {audit.rawSnapshot.crawlMethod}</span>
+            )}
+          </div>
+          <div className="space-y-1">
+            {audit.rawSnapshot.crawlErrors.map((e, i) => (
+              <div key={i} className="text-xs font-mono flex items-start gap-2">
+                <span className={`badge text-[10px] ${
+                  e.kind === "tls" ? "badge-error" :
+                  e.kind === "timeout" ? "badge-warning" : "badge-muted"
+                }`}>{e.kind}</span>
+                <span className="text-muted-foreground shrink-0">{e.phase}:</span>
+                <span className="flex-1 truncate" title={e.message}>{e.message.slice(0, 120)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 性能指标 */}
       {perf && (
         <div className="card p-4">
@@ -250,6 +298,96 @@ export default function AuditDetailPage() {
                 </div>
               ),
             )}
+          </div>
+        )}
+
+        {/* 详细优化建议（步骤 + 代码示例） */}
+        {recommendations.length > 0 && (
+          <div className="mt-8">
+            <h2 className="eyebrow">optimization_playbook</h2>
+            <div className="mt-2 text-lg font-semibold">
+              可执行优化建议（{recommendations.length} 项）
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              基于诊断结果生成，每条建议包含具体步骤、代码示例和预期收益
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {recommendations
+                .sort((a, b) => a.priority - b.priority)
+                .map((rec) => {
+                  const expanded = expandedFinding === rec.code;
+                  const impactColors = {
+                    high: "border-destructive/50 bg-destructive/5",
+                    medium: "border-warning/50 bg-warning/5",
+                    low: "border-info/50 bg-info/5",
+                  };
+                  const categoryIcons: Record<string, string> = {
+                    content: "📝", technical: "⚙️", performance: "⚡", links: "🔗", metadata: "📋",
+                  };
+                  return (
+                    <div key={rec.code} className={`card overflow-hidden ${impactColors[rec.impact]}`}>
+                      <button
+                        onClick={() => setExpandedFinding(expanded ? null : rec.code)}
+                        className="w-full p-4 text-left hover:bg-background/30 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-xl">{categoryIcons[rec.category] ?? "•"}</span>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{rec.title}</span>
+                                <span className="badge text-[10px] bg-background/50">P{rec.priority}</span>
+                                <span className={`badge text-[10px] ${
+                                  rec.impact === "high" ? "badge-error" :
+                                  rec.impact === "medium" ? "badge-warning" : "badge-info"
+                                }`}>
+                                  impact: {rec.impact}
+                                </span>
+                                <span className="badge text-[10px] bg-muted text-muted-foreground">
+                                  effort: {rec.effort}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">{rec.description}</p>
+                            </div>
+                          </div>
+                          <span className="text-muted-foreground text-xs shrink-0">{expanded ? "▲" : "▼"}</span>
+                        </div>
+                      </button>
+
+                      {expanded && (
+                        <div className="border-t border-border/50 bg-background/30 p-4 space-y-3 animate-in slide-in-from-top-2">
+                          {/* Steps */}
+                          <div>
+                            <div className="eyebrow mb-2">steps</div>
+                            <ol className="space-y-1 text-sm list-decimal list-inside">
+                              {rec.steps.map((s, i) => (
+                                <li key={i} className="text-foreground/80">{s}</li>
+                              ))}
+                            </ol>
+                          </div>
+
+                          {/* Code Example */}
+                          {rec.codeExample && (
+                            <div>
+                              <div className="eyebrow mb-2">code_example</div>
+                              <pre className="bg-background border border-border rounded p-3 text-xs font-mono overflow-x-auto">
+                                <code>{rec.codeExample}</code>
+                              </pre>
+                            </div>
+                          )}
+
+                          {/* Expected Benefit */}
+                          <div className="rounded bg-success/10 border border-success/30 p-3">
+                            <div className="eyebrow text-success mb-1">expected_benefit</div>
+                            <p className="text-sm">{rec.expectedBenefit}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         )}
       </div>
