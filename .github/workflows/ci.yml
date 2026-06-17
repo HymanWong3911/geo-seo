@@ -47,12 +47,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: pnpm prisma generate
+        run: pnpm prisma generate --schema=src/prisma/schema.prisma
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Run migrations
-        run: pnpm prisma migrate deploy
+        run: pnpm prisma migrate deploy --schema=src/prisma/schema.prisma
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
@@ -104,12 +104,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Generate Prisma client
-        run: pnpm prisma generate
+        run: pnpm prisma generate --schema=src/prisma/schema.prisma
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Run migrations
-        run: pnpm prisma migrate deploy
+        run: pnpm prisma migrate deploy --schema=src/prisma/schema.prisma
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
