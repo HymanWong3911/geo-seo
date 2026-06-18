@@ -2,7 +2,7 @@
   "name": "geo-seo",
   "version": "0.1.0",
   "private": true,
-  "description": "GEO + SEO Search Visibility Console (内部工具 MVP)",
+  "description": "GEO + SEO Search Visibility Console (\u5185\u90e8\u5de5\u5177 MVP)",
   "scripts": {
     "dev": "next dev -p 3010",
     "build": "next build",
@@ -17,7 +17,10 @@
     "prisma:deploy": "prisma migrate deploy --schema=src/prisma/schema.prisma",
     "prisma:seed": "tsx src/prisma/seed.ts",
     "prisma:studio": "prisma studio --schema=src/prisma/schema.prisma",
-    "audit": "tsx scripts/audit.ts"
+    "audit": "tsx scripts/audit.ts",
+    "smoke": "tsx --env-file=.env scripts/smoke.ts",
+    "smoke:full": "tsx --env-file=.env scripts/smoke-full.ts",
+    "llm:test": "tsx --env-file=.env scripts/test_ark.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.18.0",
