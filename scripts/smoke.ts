@@ -196,6 +196,22 @@ async function main() {
     return { ok: true, detail: `status=${JSON.stringify(body.data ?? body).slice(0,80)}` };
   });
 
+  await check("16.LLM 24h 用量统计", async () => {
+    const r = await call(`/api/llm/stats?days=1`, { auth: true });
+    if (r.status !== 200) return { ok: false, detail: `HTTP ${r.status}` };
+    const d = r.body.data ?? r.body;
+    const calls = d.totals?.calls ?? 0;
+    const tokens = d.totals?.totalTokens ?? 0;
+    return { ok: calls > 0, detail: `${calls} calls, ${tokens} tokens` };
+  });
+
+  await check("17.队列健康", async () => {
+    const r = await call(`/api/queues/stats`, { auth: true });
+    if (r.status !== 200) return { ok: false, detail: `HTTP ${r.status}` };
+    const d = r.body.data ?? r.body;
+    return { ok: true, detail: `total: ${d.total.active} active, ${d.total.failed} failed` };
+  });
+
   console.log("\n" + "=".repeat(78));
   let pass = 0, fail = 0;
   for (const c of checks) {
