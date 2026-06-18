@@ -324,6 +324,9 @@ export const enUS = {
     loginFailed: "login failed, retry",
     network: "network error",
   },
+
+  llmUsage: "LLM Usage",
+  systemHealth: "System Health",
 };
 
 export type Locale = "zh-CN" | "en-US";

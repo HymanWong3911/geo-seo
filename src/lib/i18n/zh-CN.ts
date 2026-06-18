@@ -339,6 +339,9 @@ export const zhCN = {
     loginFailed: "登录失败，请重试",
     network: "网络错误",
   },
+
+  llmUsage: "LLM 用量",
+  systemHealth: "系统健康",
 };
 
 export type Locale = "zh-CN" | "en-US";

@@ -56,7 +56,9 @@ const SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     label: "系统",
     items: [
       { href: "/notifications", labelKey: "notifications", code: "14" },
-      { href: "/settings", labelKey: "settings", code: "15" },
+      { href: "/llm/usage", labelKey: "llmUsage", code: "15" },
+      { href: "/system/health", labelKey: "systemHealth", code: "16" },
+      { href: "/settings", labelKey: "settings", code: "17" },
     ],
   },
 ]
@@ -91,6 +93,8 @@ export function SidebarClient({ isAdmin }: { isAdmin: boolean }) {
     if (href === "/reports") return pathname.startsWith("/reports")
     if (href === "/brand/monitor") return pathname.startsWith("/brand/monitor")
     if (href === "/notifications") return pathname.startsWith("/notifications")
+    if (href === "/llm/usage") return pathname.startsWith("/llm/usage")
+    if (href === "/system/health") return pathname.startsWith("/system/")
     if (href === "/settings/users") return pathname === "/settings/users"
     if (href === "/settings/cms") return pathname === "/settings/cms"
     if (href === "/settings/audit-log") return pathname === "/settings/audit-log"
