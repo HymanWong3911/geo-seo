@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProjectSelector } from "@/components/forms/ProjectSelector";
-import { QuickAction } from "@/components/ui/QuickAction";
+import { Sparkline, DonutChart, EmptyState } from "@/components/ui/DashboardWidgets";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface Task {
   id: string;
@@ -29,12 +30,21 @@ const COLUMNS: { status: Task["status"]; label: string; color: string; icon: str
 ];
 
 const PRIORITY_CONFIG: Record<number, { label: string; color: string; bg: string }> = {
-  1: { label: "紧急", color: "text-destructive", bg: "bg-destructive/10" },
-  2: { label: "高", color: "text-warning", bg: "bg-warning/10" },
-  3: { label: "中", color: "text-info", bg: "bg-info/10" },
-  4: { label: "低", color: "text-muted-foreground", bg: "bg-muted" },
-  5: { label: "很低", color: "text-muted-foreground", bg: "bg-muted" },
+  1: { label: "紧急", color: "text-destructive", bg: "bg-destructive/15 border border-destructive/30" },
+  2: { label: "高", color: "text-warning", bg: "bg-warning/15 border border-warning/30" },
+  3: { label: "中", color: "text-info", bg: "bg-info/15 border border-info/30" },
+  4: { label: "低", color: "text-muted-foreground", bg: "bg-muted border border-border" },
+  5: { label: "很低", color: "text-muted-foreground", bg: "bg-muted border border-border" },
 };
+
+function getInitials(name: string): string {
+  return name.slice(0, 2).toUpperCase();
+}
+
+function isOverdue(dueDate: string | null, status: string): boolean {
+  if (!dueDate || status === "DONE" || status === "IGNORED") return false;
+  return new Date(dueDate).getTime() < Date.now();
+}
 
 export default function TaskBoardPage() {
   const searchParams = useSearchParams();
@@ -44,6 +54,8 @@ export default function TaskBoardPage() {
   const [loading, setLoading] = useState(true);
   const [draggingTask, setDraggingTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<number | null>(null);
+  const [searchQ, setSearchQ] = useState("");
 
   async function load() {
     setLoading(true);
@@ -92,10 +104,18 @@ export default function TaskBoardPage() {
     setDraggingTask(null);
   }
 
+  // 过滤后的任务
+  const filteredTasks = useMemo(() => tasks.filter(t => {
+    if (priorityFilter !== null && t.priority !== priorityFilter) return false;
+    if (searchQ && !t.title.toLowerCase().includes(searchQ.toLowerCase()) &&
+        !(t.description ?? "").toLowerCase().includes(searchQ.toLowerCase())) return false;
+    return true;
+  }), [tasks, priorityFilter, searchQ]);
+
   const tasksByStatus = useMemo(() => {
     const grouped: Record<string, Task[]> = {};
     COLUMNS.forEach(col => { grouped[col.status] = []; });
-    tasks.forEach(task => {
+    filteredTasks.forEach(task => {
       if (grouped[task.status]) {
         grouped[task.status].push(task);
       }
@@ -104,18 +124,45 @@ export default function TaskBoardPage() {
       grouped[status].sort((a, b) => a.priority - b.priority);
     });
     return grouped;
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const stats = useMemo(() => {
     const total = tasks.length;
     const completed = tasks.filter(t => t.status === "DONE").length;
     const highPriority = tasks.filter(t => t.priority <= 2 && t.status !== "DONE" && t.status !== "IGNORED").length;
-    return { total, completed, completionRate: total > 0 ? Math.round((completed / total) * 100) : 0, highPriority };
+    const overdue = tasks.filter(t => isOverdue(t.dueDate, t.status)).length;
+    const inProgress = tasks.filter(t => t.status === "DOING").length;
+    const todoCount = tasks.filter(t => t.status === "TODO").length;
+    return {
+      total,
+      completed,
+      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+      highPriority,
+      overdue,
+      inProgress,
+      todoCount,
+    };
+  }, [tasks]);
+
+  // 状态分布饼图
+  const statusBreakdown = useMemo(() => {
+    const colors: Record<string, string> = {
+      TODO: "hsl(38 92% 50%)",
+      DOING: "hsl(217 91% 60%)",
+      REVIEW: "hsl(33 38% 60%)",
+      DONE: "hsl(142 71% 45%)",
+      IGNORED: "hsl(220 9% 46%)",
+    };
+    return COLUMNS.map(col => ({
+      label: col.label,
+      value: tasks.filter(t => t.status === col.status).length,
+      color: colors[col.status],
+    })).filter(s => s.value > 0);
   }, [tasks]);
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl space-y-6">
         <header className="page-header">
           <div className="page-header-left">
             <div className="eyebrow">// TASKS — Board</div>
@@ -123,127 +170,183 @@ export default function TaskBoardPage() {
           </div>
           <div className="page-header-right"><ProjectSelector /></div>
         </header>
+        <div className="grid grid-cols-5 gap-3">
+          {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-24" />)}
+        </div>
         <div className="grid grid-cols-5 gap-4">
-          {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-48 bg-muted animate-pulse rounded-lg" />)}
+          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-64" />)}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
-      {/* 页头 */}
+    <div className="mx-auto max-w-7xl space-y-6">
       <header className="page-header">
         <div className="page-header-left">
           <div className="eyebrow">// TASKS — Board</div>
           <h1 className="mt-2">任务看板</h1>
         </div>
-        <div className="page-header-right">
-          <ProjectSelector />
-          <a href="/tasks" className="btn-ghost">← 列表视图</a>
-        </div>
+        <div className="page-header-right"><ProjectSelector /></div>
       </header>
 
-      {/* 统计概览 */}
-      <div className="grid grid-cols-4 gap-px bg-border mb-6">
-        <div className="cell">
+      {/* KPI 卡片 */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="card p-4">
           <div className="eyebrow">total</div>
-          <div className="metric-number-sm mt-1">{stats.total}</div>
+          <div className="metric-number mt-1">{stats.total}</div>
         </div>
-        <div className="cell">
-          <div className="eyebrow">completed</div>
-          <div className="metric-number-sm mt-1 text-success">{stats.completed}</div>
+        <div className="card p-4">
+          <div className="eyebrow">todo</div>
+          <div className="metric-number mt-1 text-warning">{stats.todoCount}</div>
         </div>
-        <div className="cell">
-          <div className="eyebrow">completion_rate</div>
-          <div className="metric-number-sm mt-1">{stats.completionRate}%</div>
+        <div className="card p-4">
+          <div className="eyebrow">in_progress</div>
+          <div className="metric-number mt-1 text-info">{stats.inProgress}</div>
         </div>
-        <div className="cell">
+        <div className="card p-4">
           <div className="eyebrow">high_priority</div>
-          <div className="metric-number-sm mt-1 text-destructive">{stats.highPriority}</div>
+          <div className={`metric-number mt-1 ${stats.highPriority > 0 ? "text-destructive" : "text-muted-foreground"}`}>{stats.highPriority}</div>
+        </div>
+        <div className="card p-4">
+          <div className="eyebrow">overdue</div>
+          <div className={`metric-number mt-1 ${stats.overdue > 0 ? "text-destructive" : "text-success"}`}>{stats.overdue}</div>
+          <div className="text-[10px] text-muted-foreground mt-1">{stats.completionRate}% completed</div>
+        </div>
+      </div>
+
+      {/* 筛选条 + 状态饼图 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="card p-4 lg:col-span-2">
+          <h3 className="eyebrow mb-3">filter</h3>
+          <div className="flex gap-3 flex-wrap items-center">
+            <input
+              type="text"
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              placeholder="搜索任务..."
+              className="input-field flex-1 min-w-[200px]"
+            />
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => setPriorityFilter(null)}
+                className={`badge ${priorityFilter === null ? "bg-primary/20 text-primary border border-primary/40" : "bg-muted text-muted-foreground border border-border"} cursor-pointer`}
+              >全部优先级</button>
+              {[1, 2, 3, 4].map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPriorityFilter(priorityFilter === p ? null : p)}
+                  className={`badge cursor-pointer ${priorityFilter === p
+                    ? PRIORITY_CONFIG[p].bg + " " + PRIORITY_CONFIG[p].color
+                    : "bg-muted text-muted-foreground border border-border"
+                  }`}
+                >P{p}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <h3 className="eyebrow mb-3">status_distribution</h3>
+          {statusBreakdown.length > 0 ? (
+            <DonutChart
+              segments={statusBreakdown}
+              centerLabel="tasks"
+              centerValue={stats.total}
+              size={100}
+              thickness={12}
+            />
+          ) : (
+            <EmptyState icon="∅" description="暂无任务" />
+          )}
         </div>
       </div>
 
       {/* Kanban 看板 */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {COLUMNS.map(col => (
           <div
             key={col.status}
             className={`flex flex-col rounded-lg border-2 transition-all ${
-              dragOverColumn === col.status 
-                ? `${col.color} bg-card ring-2 ring-primary/20` 
+              dragOverColumn === col.status
+                ? `${col.color} bg-card ring-2 ring-primary/20`
                 : "border-border bg-card/50"
             }`}
             onDragOver={e => handleDragOver(e, col.status)}
             onDragLeave={handleDragLeave}
             onDrop={e => handleDrop(e, col.status)}
           >
-            {/* 列头 */}
             <div className={`border-b-2 p-4 ${col.color}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span>{col.icon}</span>
                   <span className="font-medium">{col.label}</span>
                 </div>
-                <span className="badge badge-muted">{tasksByStatus[col.status]?.length ?? 0}</span>
+                <span className="badge badge-muted font-mono">{tasksByStatus[col.status]?.length ?? 0}</span>
               </div>
             </div>
-            
-            {/* 任务卡片 */}
-            <div className="flex-1 space-y-3 overflow-y-auto p-3" style={{ maxHeight: "calc(100vh - 320px)" }}>
-              {tasksByStatus[col.status]?.map((task, index) => (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={e => handleDragStart(e, task)}
-                  onDragEnd={() => setDraggingTask(null)}
-                  className={`card p-4 cursor-grab active:cursor-grabbing transition-all hover:border-primary/30 group ${
-                    draggingTask?.id === task.id ? "opacity-50 scale-95" : ""
-                  }`}
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  {/* 优先级和来源 */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`badge text-[10px] ${PRIORITY_CONFIG[task.priority]?.bg} ${PRIORITY_CONFIG[task.priority]?.color}`}>
-                      P{task.priority} {PRIORITY_CONFIG[task.priority]?.label}
-                    </span>
-                    {task.sourceType && (
-                      <span className="badge badge-muted text-[10px] opacity-60">{task.sourceType}</span>
+
+            <div className="flex-1 space-y-3 overflow-y-auto p-3" style={{ maxHeight: "calc(100vh - 380px)" }}>
+              {tasksByStatus[col.status]?.map((task, index) => {
+                const overdue = isOverdue(task.dueDate, task.status);
+                return (
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={e => handleDragStart(e, task)}
+                    onDragEnd={() => setDraggingTask(null)}
+                    className={`card p-4 cursor-grab active:cursor-grabbing transition-all hover:border-primary/30 group ${
+                      draggingTask?.id === task.id ? "opacity-50 scale-95" : ""
+                    } ${overdue ? "border-destructive/50 bg-destructive/5" : ""}`}
+                    style={{ animationDelay: `${index * 30}ms` }}
+                  >
+                    {/* 优先级 + 来源 */}
+                    <div className="flex items-center justify-between mb-3 gap-2">
+                      <span className={`badge text-[10px] font-mono ${PRIORITY_CONFIG[task.priority]?.bg} ${PRIORITY_CONFIG[task.priority]?.color}`}>
+                        P{task.priority} {PRIORITY_CONFIG[task.priority]?.label}
+                      </span>
+                      {task.sourceType && (
+                        <span className="badge bg-muted text-muted-foreground text-[10px] opacity-70">{task.sourceType}</span>
+                      )}
+                    </div>
+
+                    <h4 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                      {task.title}
+                    </h4>
+
+                    {task.description && (
+                      <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
+                        {task.description}
+                      </p>
                     )}
+
+                    {/* 底部: assignee + due date + url */}
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {task.assignee ? (
+                          <div
+                            className="h-5 w-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[9px] font-mono shrink-0"
+                            title={task.assignee}
+                          >
+                            {getInitials(task.assignee)}
+                          </div>
+                        ) : (
+                          <div className="h-5 w-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[9px] shrink-0" title="未分配">?</div>
+                        )}
+                        <span className="text-[10px] text-muted-foreground truncate">{task.project.name}</span>
+                      </div>
+                      {overdue && (
+                        <span className="badge bg-destructive/20 text-destructive text-[10px] shrink-0">overdue</span>
+                      )}
+                      {!overdue && task.dueDate && (
+                        <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                          {new Date(task.dueDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  
-                  {/* 标题 */}
-                  <h4 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
-                    {task.title}
-                  </h4>
-                  
-                  {/* 描述 */}
-                  {task.description && (
-                    <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-                      {task.description}
-                    </p>
-                  )}
-                  
-                  {/* 底部信息 */}
-                  <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground truncate max-w-[60%]">
-                      {task.project.name}
-                    </span>
-                    {task.url && (
-                      <a 
-                        href={task.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-primary hover:underline"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        link ↗
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
-              
+                );
+              })}
+
               {(!tasksByStatus[col.status] || tasksByStatus[col.status].length === 0) && (
                 <div className="flex h-24 items-center justify-center text-sm text-muted-foreground border border-dashed border-border rounded-lg">
                   {col.status === "TODO" ? "拖拽任务到这 ↓" : "无任务"}
@@ -254,7 +357,6 @@ export default function TaskBoardPage() {
         ))}
       </div>
 
-      {/* 拖拽提示 */}
       {draggingTask && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-primary/30 rounded-lg px-6 py-3 shadow-xl backdrop-blur-sm">
           <div className="flex items-center gap-3">

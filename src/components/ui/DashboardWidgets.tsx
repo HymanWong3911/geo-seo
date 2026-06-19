@@ -364,3 +364,221 @@ export function ListItem({
 
   return content
 }
+
+// ============================================================
+// Donut 圆环图 (多段饼图,常用于来源/平台分布)
+// ============================================================
+export interface DonutSegment {
+  label: string;
+  value: number;
+  color: string;
+}
+
+interface DonutChartProps {
+  segments: DonutSegment[];
+  size?: number;
+  thickness?: number;
+  centerLabel?: string;
+  centerValue?: string | number;
+  showLegend?: boolean;
+  className?: string;
+}
+
+export function DonutChart({
+  segments,
+  size = 120,
+  thickness = 14,
+  centerLabel,
+  centerValue,
+  showLegend = true,
+  className = "",
+}: DonutChartProps) {
+  const total = segments.reduce((s, x) => s + x.value, 0);
+  const r = (size - thickness) / 2;
+  const c = 2 * Math.PI * r;
+  let acc = 0;
+
+  return (
+    <div className={`flex items-center gap-4 ${className}`}>
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={thickness} />
+          {total > 0 && segments.map((seg, i) => {
+            const portion = seg.value / total;
+            const dash = portion * c;
+            const offset = c - acc * c;
+            acc += portion;
+            return (
+              <circle
+                key={i}
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="none"
+                stroke={seg.color}
+                strokeWidth={thickness}
+                strokeDasharray={`${dash} ${c - dash}`}
+                strokeDashoffset={offset}
+                strokeLinecap="butt"
+                className="transition-all duration-700"
+              />
+            );
+          })}
+        </svg>
+        {(centerLabel || centerValue) && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {centerValue !== undefined && (
+              <span className="text-lg font-bold tabular-nums">{centerValue}</span>
+            )}
+            {centerLabel && (
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{centerLabel}</span>
+            )}
+          </div>
+        )}
+      </div>
+      {showLegend && (
+        <div className="flex-1 space-y-1.5 min-w-0">
+          {segments.map((seg, i) => {
+            const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
+            return (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: seg.color }} />
+                <span className="flex-1 truncate text-muted-foreground">{seg.label}</span>
+                <span className="font-mono tabular-nums">{seg.value}</span>
+                <span className="text-muted-foreground font-mono tabular-nums w-8 text-right">{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// BarChart 横向条形图(常用于 Top N)
+// ============================================================
+export interface BarItem {
+  label: string;
+  value: number;
+  color?: string;
+  suffix?: string;
+}
+
+interface BarChartProps {
+  data: BarItem[];
+  max?: number;
+  showValues?: boolean;
+  className?: string;
+  defaultColor?: string;
+}
+
+export function BarChart({
+  data,
+  max,
+  showValues = true,
+  className = "",
+  defaultColor = "hsl(var(--primary))",
+}: BarChartProps) {
+  const m = max ?? Math.max(...data.map(d => d.value), 1);
+  return (
+    <div className={`space-y-2 ${className}`}>
+      {data.map((item, i) => {
+        const pct = Math.min(100, Math.max(0, (item.value / m) * 100));
+        return (
+          <div key={i} className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="truncate text-foreground/90">{item.label}</span>
+              {showValues && (
+                <span className="font-mono tabular-nums text-muted-foreground">
+                  {item.value}{item.suffix ?? ""}
+                </span>
+              )}
+            </div>
+            <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${pct}%`,
+                  backgroundColor: item.color ?? defaultColor,
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
+// Sparkline 极简趋势线(更细更窄,适合塞进 stat card)
+// ============================================================
+interface SparklineProps {
+  data: number[];
+  color?: string;
+  width?: number;
+  height?: number;
+  className?: string;
+}
+
+export function Sparkline({
+  data,
+  color = "hsl(var(--primary))",
+  width = 80,
+  height = 24,
+  className = "",
+}: SparklineProps) {
+  if (data.length < 2) {
+    return <div className={`font-mono text-[10px] text-muted-foreground ${className}`} style={{ width, height }}>_</div>;
+  }
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg width={width} height={height} className={className} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+      />
+      <circle cx={width} cy={height - ((data[data.length - 1] - min) / range) * (height - 4) - 2} r="2" fill={color} />
+    </svg>
+  );
+}
+
+// ============================================================
+// EmptyState 通用空态
+// ============================================================
+interface EmptyStateProps {
+  icon?: string;
+  title?: string;
+  description?: string;
+  action?: ReactNode;
+  className?: string;
+}
+
+export function EmptyState({
+  icon = "∅",
+  title,
+  description,
+  action,
+  className = "",
+}: EmptyStateProps) {
+  return (
+    <div className={`flex flex-col items-center justify-center py-12 px-4 text-center border border-dashed border-border/60 rounded-lg bg-card/20 ${className}`}>
+      <div className="text-3xl mb-3 opacity-50">{icon}</div>
+      {title && <div className="text-sm font-medium text-foreground mb-1">{title}</div>}
+      {description && <div className="text-xs text-muted-foreground max-w-md">{description}</div>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}

@@ -163,13 +163,9 @@ export async function monitorBrand(
   for (const q of queries) {
     // 多源抓取：SearXNG 聚合（google + bing + 360 + sogou）优先，Bing 直连兜底
     let hits = await searchSearXNG(q.name, maxResults);
-    if (hits.length === 0) {
-      hits = await searchBing(q.name, maxResults);
-    }
-    // SearXNG 不可用时，尝试 360 独立抓取
-    if (hits.length === 0) {
-      hits = await search360Independent(q.name, maxResults);
-    }
+    if (hits.length === 0) hits = await searchBing(q.name, maxResults);
+    if (hits.length === 0) hits = await searchDuckDuckGo(q.name, maxResults);
+    if (hits.length === 0) hits = await search360Independent(q.name, maxResults);
     hits = hits.slice(0, maxResults);
 
     for (const h of hits) {
@@ -231,3 +227,44 @@ export async function monitorBrand(
 
   return results;
 }
+
+// DuckDuckGo HTML 抓取（备用源 — 不需要 API key）
+async function searchDuckDuckGo(query: string, maxResults = 5): Promise<SearchHit[]> {
+  try {
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+    const results: SearchHit[] = [];
+    // DDG HTML 结构: <a class="result__a" href="...">title</a> <a class="result__snippet">snippet</a>
+    const resultRe = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+    const seen = new Set<string>();
+    let m: RegExpExecArray | null;
+    while ((m = resultRe.exec(html)) !== null && results.length < maxResults) {
+      // 提取真实 URL(DDG 重定向 URL 在 uddg= 参数里)
+      let link = m[1];
+      const uddgMatch = link.match(/[?&]uddg=([^&]+)/);
+      if (uddgMatch) {
+        try { link = decodeURIComponent(uddgMatch[1]); } catch { /* keep original */ }
+      }
+      if (seen.has(link) || !link.startsWith("http")) continue;
+      seen.add(link);
+      const title = m[2].replace(/<[^>]+>/g, "").trim();
+      const content = m[3].replace(/<[^>]+>/g, "").trim();
+      if (!title) continue;
+      results.push({ url: link, title, content: content.slice(0, 500), engine: "duckduckgo" });
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// 修复:把 DuckDuckGo 加到 monitorBrand 的 fallback 链
