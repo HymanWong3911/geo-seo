@@ -47,18 +47,19 @@ const SECTIONS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "任务与报告",
     items: [
-      { href: "/tasks", labelKey: "tasks", code: "11" },
-      { href: "/reports", labelKey: "reports", code: "12" },
-      { href: "/brand/monitor", labelKey: "brandMonitor", code: "13" },
+      { href: "/insights", labelKey: "insights", code: "11" },
+      { href: "/tasks", labelKey: "tasks", code: "12" },
+      { href: "/reports", labelKey: "reports", code: "13" },
+      { href: "/brand/monitor", labelKey: "brandMonitor", code: "14" },
     ],
   },
   {
     label: "系统",
     items: [
-      { href: "/notifications", labelKey: "notifications", code: "14" },
-      { href: "/llm/usage", labelKey: "llmUsage", code: "15" },
-      { href: "/system/health", labelKey: "systemHealth", code: "16" },
-      { href: "/settings", labelKey: "settings", code: "17" },
+      { href: "/notifications", labelKey: "notifications", code: "15" },
+      { href: "/llm/usage", labelKey: "llmUsage", code: "16" },
+      { href: "/system/health", labelKey: "systemHealth", code: "17" },
+      { href: "/settings", labelKey: "settings", code: "18" },
     ],
   },
 ]

@@ -341,6 +341,7 @@ export const zhCN = {
   },
 
   llmUsage: "LLM 用量",
+  insights: "AI 洞察",
   systemHealth: "系统健康",
 };
 

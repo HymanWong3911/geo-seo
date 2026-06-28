@@ -371,6 +371,7 @@ export default function DashboardPage() {
             <QuickAction title="GEO 监测" description="AI 搜索引擎表现监测" icon="🤖" href="/geo" />
             <QuickAction title="任务看板" description="可视化任务管理" icon="📋" href="/tasks/board" />
             <QuickAction title="分发历史" description="查看所有分发记录" icon="📤" href="/content/distribution/history" />
+            <QuickAction title="AI 洞察" description="LLM 生成的项目机会 / 风险 / 行动" icon="🤖" href="/insights" badge="NEW" badgeVariant="info" />
           </QuickActionGrid>
         </DashboardSection>
       </div>

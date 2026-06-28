@@ -326,6 +326,7 @@ export const enUS = {
   },
 
   llmUsage: "LLM Usage",
+  insights: "AI Insights",
   systemHealth: "System Health",
 };
 
