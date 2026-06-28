@@ -80,19 +80,42 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<AuditStats | null>(null);
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState<{
+    headline: string;
+    summary: string;
+    source: string;
+    actions: Array<{ title: string; priority: string; href?: string }>;
+    opportunities: Array<{ title: string; metric?: string }>;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      const [dashRes, sysRes] = await Promise.all([
-        fetch("/api/dashboard/summary").then(r => r.ok ? r.json() : null),
-        fetch("/api/dashboard/system-stats").then(r => r.ok ? r.json() : null),
-      ]);
-      if (cancelled) return;
-      setStats(dashRes?.data ?? null);
-      setSystemStats(sysRes?.data ?? null);
-      setLoading(false);
+      const requests: [Promise<Response>, Promise<Response>, Promise<Response>] = [
+        fetch("/api/dashboard/summary"),
+        fetch("/api/dashboard/system-stats"),
+        projectId
+          ? fetch(`/api/projects/${projectId}/insights`)
+          : Promise.resolve(null as any),
+      ];
+    const [dashRes, sysRes, insightsRes] = await Promise.all(requests);
+    const dashJson = dashRes.ok ? await dashRes.json() : null;
+    const sysJson = sysRes.ok ? await sysRes.json() : null;
+    const insightsJson = insightsRes && (insightsRes as Response).ok ? await (insightsRes as Response).json() : null;
+    if (cancelled) return;
+    setStats(dashJson?.data ?? null);
+    setSystemStats(sysJson?.data ?? null);
+    if (insightsJson?.data) {
+      setInsights({
+        headline: insightsJson.data.headline,
+        summary: insightsJson.data.summary,
+        source: insightsJson.data.source,
+        actions: (insightsJson.data.actions ?? []).slice(0, 3),
+        opportunities: (insightsJson.data.opportunities ?? []).slice(0, 3),
+      });
+    }
+    setLoading(false);
     }
     void load();
     const id = setInterval(load, 30_000);
@@ -329,7 +352,45 @@ export default function DashboardPage() {
         </DashboardSection>
       </div>
 
+      {/* AI 洞察速览 */}
+      {insights && (
+        <DashboardSection
+          eyebrow="// AI INSIGHTS"
+          title="🤖 AI 洞察速览"
+          className="col-span-1"
+        >
+          <div className="space-y-3">
+            <div className="rounded-lg bg-gradient-to-br from-sky-50 to-violet-50 dark:from-sky-950/30 dark:to-violet-950/30 border border-sky-200/50 dark:border-sky-900/40 p-3">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-snug">{insights.headline}</p>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{insights.summary}</p>
+            </div>
+            {insights.actions.length > 0 && (
+              <div>
+                <div className="text-[10px] font-mono uppercase text-muted-foreground mb-2">推荐行动</div>
+                <div className="space-y-1.5">
+                  {insights.actions.map((a, i) => {
+                    const pColor = a.priority === "P0" ? "border-red-400 bg-red-50 dark:bg-red-950/30" : a.priority === "P1" ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : "border-sky-400 bg-sky-50 dark:bg-sky-950/30";
+                    return (
+                      <Link key={i} href={a.href || "/insights"} className={`block rounded-md border-l-2 ${pColor} px-2 py-1.5 text-xs hover:opacity-80`}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold">{a.priority}</span>
+                          <span className="truncate text-slate-700 dark:text-slate-300">{a.title}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <Link href="/insights" className="block text-xs text-center text-sky-600 dark:text-sky-400 hover:underline pt-1">
+              查看完整洞察 →
+            </Link>
+          </div>
+        </DashboardSection>
+      )}
+
       {/* 最近诊断 + 快捷入口 */}
+
       <div className="grid grid-cols-3 gap-6">
         <DashboardSection eyebrow="// RECENT AUDITS" title="最近诊断" className="col-span-2">
           <div className="space-y-2">

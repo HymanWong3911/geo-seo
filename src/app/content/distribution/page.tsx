@@ -57,6 +57,8 @@ export default function DistributionPage() {
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; message: string; durationMs?: number }>>({});
 
   async function load() {
     if (!projectId) { setTargets([]); return; }
@@ -65,6 +67,30 @@ export default function DistributionPage() {
     const json = await res.json();
     setTargets(json.data ?? []);
     setLoading(false);
+  }
+
+  async function testConnection(target: DistributionTarget) {
+    setTestingId(target.id);
+    const t0 = Date.now();
+    try {
+      const res = await fetch(`/api/distribution-targets/${target.id}/test`, { method: "POST" });
+      const json = await res.json();
+      const data = json.data;
+      const summary = data?.ok
+        ? `✓ ${(data.checks ?? []).map((c: any) => c.name + (c.durationMs ? `(${c.durationMs}ms)` : "")).join(" · ")}`
+        : `✗ ${data?.suggestedFix ?? json.error?.message ?? "失败"}`;
+      setTestResults((prev) => ({
+        ...prev,
+        [target.id]: { ok: !!data?.ok, message: summary, durationMs: Date.now() - t0 },
+      }));
+    } catch (e: any) {
+      setTestResults((prev) => ({
+        ...prev,
+        [target.id]: { ok: false, message: e.message ?? "网络错误", durationMs: Date.now() - t0 },
+      }));
+    } finally {
+      setTestingId(null);
+    }
   }
 
   useEffect(() => { void load(); }, [projectId]);
@@ -177,12 +203,25 @@ export default function DistributionPage() {
                       {target.lastLog?.status === "FAILED" && (
                         <span className="text-destructive">{target.lastLog.errorMessage}</span>
                       )}
+                      {testResults[target.id] && (
+                        <span className={testResults[target.id].ok ? "text-success" : "text-destructive"}>
+                          {testResults[target.id].message}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`status-dot ${target.active ? "online" : "idle"}`} />
                   <span className="text-xs">{target.active ? "启用" : "停用"}</span>
+                  <button
+                    className="btn-ghost btn-sm"
+                    onClick={() => void testConnection(target)}
+                    disabled={testingId === target.id}
+                    title="测试连接,验证目标配置"
+                  >
+                    {testingId === target.id ? "测试中..." : "🔌 测试连接"}
+                  </button>
                   <button className="btn-ghost btn-sm">编辑</button>
                 </div>
               </div>
