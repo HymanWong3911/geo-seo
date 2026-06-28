@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEO//SEO — GEO 运行历史</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo"><div></div></div>
+      <div><div class="brand-name">GEO/SEO</div><div class="brand-sub">Control Center</div></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-section-label">首页</div>
+        <a class="nav-item" href="index.html"><span>📊</span><span>仪表盘</span><span class="nav-code">01</span></a>
+        <a class="nav-item" href="projects.html"><span>📁</span><span>项目</span><span class="nav-code">02</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">SEO 诊断</div>
+        <a class="nav-item" href="audits.html"><span>🔍</span><span>审计</span><span class="nav-code">03</span></a>
+        <a class="nav-item" href="keywords.html"><span>🔑</span><span>关键词</span><span class="nav-code">04</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">GEO 监测</div>
+        <a class="nav-item" href="geo.html"><span>🌐</span><span>GEO 概览</span><span class="nav-code">05</span></a>
+        <a class="nav-item active" href="geo-runs.html"><span>📈</span><span>运行历史</span><span class="nav-code">06</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">内容运营</div>
+        <a class="nav-item" href="content.html"><span>📝</span><span>内容</span><span class="nav-code">07</span></a>
+        <a class="nav-item" href="drafts.html"><span>📄</span><span>草稿</span><span class="nav-code">08</span></a>
+        <a class="nav-item" href="review.html"><span>👀</span><span>审核</span><span class="nav-code">09</span></a>
+        <a class="nav-item" href="distribution.html"><span>📤</span><span>分发</span><span class="nav-code">10</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">任务与报告</div>
+        <a class="nav-item" href="insights.html"><span>🤖</span><span>AI 洞察</span><span class="nav-code">11</span></a>
+        <a class="nav-item" href="tasks.html"><span>📋</span><span>任务看板</span><span class="nav-code">12</span></a>
+        <a class="nav-item" href="reports.html"><span>📑</span><span>报告</span><span class="nav-code">13</span></a>
+        <a class="nav-item" href="brand-monitor.html"><span>📡</span><span>品牌监控</span><span class="nav-code">14</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">系统</div>
+        <a class="nav-item" href="llm-usage.html"><span>💎</span><span>LLM 用量</span><span class="nav-code">15</span></a>
+        <a class="nav-item" href="system-health.html"><span>❤️</span><span>系统健康</span><span class="nav-code">16</span></a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="mono" style="font-size: 12px; color: var(--muted-foreground);">// 森田咨询 (www.sentian100.com)</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="status success">系统在线</span>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 12px;">A</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+        <div class="page-header" style="margin: 0;">
+          <div class="eyebrow">// GEO — Run History</div>
+          <h1 class="page-title">GEO 运行历史</h1>
+          <p class="page-desc">查看每次 GEO 检测的运行结果、状态、耗时</p>
+        </div>
+        <button class="btn primary">+ 触发新运行</button>
+      </div>
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">总运行</div>
+          <div class="kpi-value">105</div>
+        </div>
+        <div class="kpi good">
+          <div class="kpi-label">成功</div>
+          <div class="kpi-value">98</div>
+        </div>
+        <div class="kpi bad">
+          <div class="kpi-label">失败</div>
+          <div class="kpi-value">5</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">平均耗时</div>
+          <div class="kpi-value">63<span style="font-size: 14px; color: var(--muted-foreground);">s</span></div>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+        <span class="status success" style="cursor: pointer;">全部 (105)</span>
+        <span class="status success" style="cursor: pointer; opacity: 0.7;">成功 (98)</span>
+        <span class="status pending" style="cursor: pointer; opacity: 0.7;">部分失败 (2)</span>
+        <span class="status failed" style="cursor: pointer; opacity: 0.7;">失败 (5)</span>
+      </div>
+
+      <!-- Table -->
+      <table class="table">
+        <thead>
+          <tr>
+            <th>状态</th>
+            <th>触发</th>
+            <th>Provider / Model</th>
+            <th style="text-align: right;">问题</th>
+            <th style="text-align: right;">结果</th>
+            <th style="text-align: right;">耗时</th>
+            <th>完成时间</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="status success">SUCCESS</span></td>
+            <td class="mono" style="font-size: 11px;">MANUAL</td>
+            <td>
+              <div class="mono" style="font-size: 12px;">kimi · kimi-k2-0905-preview</div>
+            </td>
+            <td style="text-align: right;" class="mono">17</td>
+            <td style="text-align: right;" class="mono" style="color: var(--primary);">17</td>
+            <td style="text-align: right;" class="mono" style="font-size: 11px; color: var(--muted-foreground);">57s</td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">10:30</td>
+            <td style="text-align: right;"><a href="#" class="btn">详情 →</a></td>
+          </tr>
+          <tr>
+            <td><span class="status success">SUCCESS</span></td>
+            <td class="mono" style="font-size: 11px;">MANUAL</td>
+            <td>
+              <div class="mono" style="font-size: 12px;">doubao · doubao-seed-1-6-250615</div>
+            </td>
+            <td style="text-align: right;" class="mono">17</td>
+            <td style="text-align: right;" class="mono" style="color: var(--primary);">17</td>
+            <td style="text-align: right;" class="mono" style="font-size: 11px; color: var(--muted-foreground);">112s</td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">09:18</td>
+            <td style="text-align: right;"><a href="#" class="btn">详情 →</a></td>
+          </tr>
+          <tr>
+            <td><span class="status success">SUCCESS</span></td>
+            <td class="mono" style="font-size: 11px;">SCHEDULED</td>
+            <td>
+              <div class="mono" style="font-size: 12px;">kimi · kimi-k2-0905-preview</div>
+            </td>
+            <td style="text-align: right;" class="mono">17</td>
+            <td style="text-align: right;" class="mono" style="color: var(--primary);">17</td>
+            <td style="text-align: right;" class="mono" style="font-size: 11px; color: var(--muted-foreground);">49s</td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">06:00</td>
+            <td style="text-align: right;"><a href="#" class="btn">详情 →</a></td>
+          </tr>
+          <tr>
+            <td><span class="status pending">PARTIAL_FAILURE</span></td>
+            <td class="mono" style="font-size: 11px;">MANUAL</td>
+            <td>
+              <div class="mono" style="font-size: 12px;">ark · ark-code-latest</div>
+            </td>
+            <td style="text-align: right;" class="mono">17</td>
+            <td style="text-align: right;" class="mono" style="color: var(--warning);">14</td>
+            <td style="text-align: right;" class="mono" style="font-size: 11px; color: var(--muted-foreground);">88s</td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">昨天 18:42</td>
+            <td style="text-align: right;"><a href="#" class="btn">详情 →</a></td>
+          </tr>
+          <tr>
+            <td><span class="status failed">FAILED</span></td>
+            <td class="mono" style="font-size: 11px;">MANUAL</td>
+            <td>
+              <div class="mono" style="font-size: 12px;">openai · gpt-4o</div>
+            </td>
+            <td style="text-align: right;" class="mono">17</td>
+            <td style="text-align: right;" class="mono" style="color: var(--destructive);">0</td>
+            <td style="text-align: right;" class="mono" style="font-size: 11px; color: var(--muted-foreground);">12s</td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">昨天 16:15</td>
+            <td style="text-align: right;"><a href="#" class="btn">详情 →</a></td>
+          </tr>
+          <tr>
+            <td><span class="status success">SUCCESS</span></td>
+            <td class="mono" style="font-size: 11px;">SCHEDULED</td>
+            <td>
+              <div class="mono" style="font-size: 12px;">kimi · kimi-k2-0905-preview</div>
+            </td>
+            <td style="text-align: right;" class="mono">17</td>
+            <td style="text-align: right;" class="mono" style="color: var(--primary);">17</td>
+            <td style="text-align: right;" class="mono" style="font-size: 11px; color: var(--muted-foreground);">52s</td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">2 天前 06:00</td>
+            <td style="text-align: right;"><a href="#" class="btn">详情 →</a></td>
+          </tr>
+          <tr>
+            <td><span class="status success">SUCCESS</span></td>
+            <td class="mono" style="font-size: 11px;">MANUAL</td>
+            <td>
+              <div class="mono" style="font-size: 12px;">doubao · doubao-seed-1-6-250615</div>
+            </td>
+            <td style="text-align: right;" class="mono">17</td>
+            <td style="text-align: right;" class="mono" style="color: var(--primary);">17</td>
+            <td style="text-align: right;" class="mono" style="font-size: 11px; color: var(--muted-foreground);">98s</td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">3 天前 14:23</td>
+            <td style="text-align: right;"><a href="#" class="btn">详情 →</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>

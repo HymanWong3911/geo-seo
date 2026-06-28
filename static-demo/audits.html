@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEO//SEO — 审计</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo"><div></div></div>
+      <div><div class="brand-name">GEO/SEO</div><div class="brand-sub">Control Center</div></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-section-label">首页</div>
+        <a class="nav-item" href="index.html"><span>📊</span><span>仪表盘</span><span class="nav-code">01</span></a>
+        <a class="nav-item" href="projects.html"><span>📁</span><span>项目</span><span class="nav-code">02</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">SEO 诊断</div>
+        <a class="nav-item active" href="audits.html"><span>🔍</span><span>审计</span><span class="nav-code">03</span></a>
+        <a class="nav-item" href="keywords.html"><span>🔑</span><span>关键词</span><span class="nav-code">04</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">GEO 监测</div>
+        <a class="nav-item" href="geo.html"><span>🌐</span><span>GEO 概览</span><span class="nav-code">05</span></a>
+        <a class="nav-item" href="geo-runs.html"><span>📈</span><span>运行历史</span><span class="nav-code">06</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">内容运营</div>
+        <a class="nav-item" href="content.html"><span>📝</span><span>内容</span><span class="nav-code">07</span></a>
+        <a class="nav-item" href="drafts.html"><span>📄</span><span>草稿</span><span class="nav-code">08</span></a>
+        <a class="nav-item" href="review.html"><span>👀</span><span>审核</span><span class="nav-code">09</span></a>
+        <a class="nav-item" href="distribution.html"><span>📤</span><span>分发</span><span class="nav-code">10</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">任务与报告</div>
+        <a class="nav-item" href="insights.html"><span>🤖</span><span>AI 洞察</span><span class="nav-code">11</span></a>
+        <a class="nav-item" href="tasks.html"><span>📋</span><span>任务看板</span><span class="nav-code">12</span></a>
+        <a class="nav-item" href="reports.html"><span>📑</span><span>报告</span><span class="nav-code">13</span></a>
+        <a class="nav-item" href="brand-monitor.html"><span>📡</span><span>品牌监控</span><span class="nav-code">14</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">系统</div>
+        <a class="nav-item" href="llm-usage.html"><span>💎</span><span>LLM 用量</span><span class="nav-code">15</span></a>
+        <a class="nav-item" href="system-health.html"><span>❤️</span><span>系统健康</span><span class="nav-code">16</span></a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="mono" style="font-size: 12px; color: var(--muted-foreground);">// 森田咨询 (www.sentian100.com)</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="status success">系统在线</span>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 12px;">A</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+        <div class="page-header" style="margin: 0;">
+          <div class="eyebrow">// SEO — Audit History</div>
+          <h1 class="page-title">页面审计</h1>
+          <p class="page-desc">对项目页面进行真实抓取 + 评分,识别 SEO 问题</p>
+        </div>
+        <button class="btn primary">+ 新建审计</button>
+      </div>
+
+      <!-- Filter bar -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+        <span class="status success" style="cursor: pointer;">全部 (7)</span>
+        <span class="status failed" style="cursor: pointer; opacity: 0.5;">低分 (&lt;60) (1)</span>
+        <span class="status pending" style="cursor: pointer; opacity: 0.5;">中分 (60-79) (2)</span>
+        <span class="status success" style="cursor: pointer; opacity: 0.5;">高分 (≥80) (4)</span>
+      </div>
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi warn">
+          <div class="kpi-label">SEO 均分</div>
+          <div class="kpi-value">53<span style="font-size: 14px; color: var(--muted-foreground);">/100</span></div>
+        </div>
+        <div class="kpi bad">
+          <div class="kpi-label">低分页</div>
+          <div class="kpi-value">1</div>
+          <div class="kpi-sub">需要修复</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">总审计数</div>
+          <div class="kpi-value">7</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">高危发现</div>
+          <div class="kpi-value">14</div>
+          <div class="kpi-sub">8 高 + 6 中</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <table class="table">
+        <thead>
+          <tr>
+            <th>页面</th>
+            <th>项目</th>
+            <th style="text-align: center;">评分</th>
+            <th>发现</th>
+            <th>HTTP</th>
+            <th>可索引</th>
+            <th>时间</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div style="font-weight: 500;">404 Not Found</div>
+              <div class="mono" style="font-size: 11px; color: var(--muted-foreground);">www.sentian100.com/services</div>
+            </td>
+            <td class="mono" style="font-size: 11px;">森田咨询</td>
+            <td style="text-align: center;"><span class="score-ring bad">14</span></td>
+            <td><span class="status failed">8 项</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--destructive);">404</td>
+            <td><span style="color: var(--destructive);">✗</span></td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">2 小时前</td>
+            <td style="text-align: right;"><a href="#" class="btn">查看 →</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight: 500;">森田咨询首页</div>
+              <div class="mono" style="font-size: 11px; color: var(--muted-foreground);">www.sentian100.com/</div>
+            </td>
+            <td class="mono" style="font-size: 11px;">森田咨询</td>
+            <td style="text-align: center;"><span class="score-ring good">85</span></td>
+            <td><span style="color: var(--success);" class="mono" style="font-size: 12px;">0 项</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--success);">200</td>
+            <td><span style="color: var(--success);">✓</span></td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">5 小时前</td>
+            <td style="text-align: right;"><a href="#" class="btn">查看 →</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight: 500;">领导力培训课程</div>
+              <div class="mono" style="font-size: 11px; color: var(--muted-foreground);">www.sentian100.com/leadership</div>
+            </td>
+            <td class="mono" style="font-size: 11px;">森田咨询</td>
+            <td style="text-align: center;"><span class="score-ring warn">62</span></td>
+            <td><span class="status pending">3 项</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--success);">200</td>
+            <td><span style="color: var(--success);">✓</span></td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">1 天前</td>
+            <td style="text-align: right;"><a href="#" class="btn">查看 →</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight: 500;">数字化转型</div>
+              <div class="mono" style="font-size: 11px; color: var(--muted-foreground);">www.sentian100.com/digital</div>
+            </td>
+            <td class="mono" style="font-size: 11px;">森田咨询</td>
+            <td style="text-align: center;"><span class="score-ring warn">58</span></td>
+            <td><span class="status pending">4 项</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--success);">200</td>
+            <td><span style="color: var(--success);">✓</span></td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">2 天前</td>
+            <td style="text-align: right;"><a href="#" class="btn">查看 →</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight: 500;">战略咨询介绍</div>
+              <div class="mono" style="font-size: 11px; color: var(--muted-foreground);">www.sentian100.com/strategy</div>
+            </td>
+            <td class="mono" style="font-size: 11px;">森田咨询</td>
+            <td style="text-align: center;"><span class="score-ring good">78</span></td>
+            <td><span class="status pending">2 项</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--success);">200</td>
+            <td><span style="color: var(--success);">✓</span></td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">3 天前</td>
+            <td style="text-align: right;"><a href="#" class="btn">查看 →</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight: 500;">组织变革管理</div>
+              <div class="mono" style="font-size: 11px; color: var(--muted-foreground);">www.sentian100.com/change</div>
+            </td>
+            <td class="mono" style="font-size: 11px;">森田咨询</td>
+            <td style="text-align: center;"><span class="score-ring good">82</span></td>
+            <td><span class="status pending">1 项</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--success);">200</td>
+            <td><span style="color: var(--success);">✓</span></td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">4 天前</td>
+            <td style="text-align: right;"><a href="#" class="btn">查看 →</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight: 500;">管理咨询案例</div>
+              <div class="mono" style="font-size: 11px; color: var(--muted-foreground);">www.sentian100.com/cases</div>
+            </td>
+            <td class="mono" style="font-size: 11px;">森田咨询</td>
+            <td style="text-align: center;"><span class="score-ring good">88</span></td>
+            <td><span style="color: var(--success);" class="mono" style="font-size: 12px;">0 项</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--success);">200</td>
+            <td><span style="color: var(--success);">✓</span></td>
+            <td class="mono" style="font-size: 11px; color: var(--muted-foreground);">5 天前</td>
+            <td style="text-align: right;"><a href="#" class="btn">查看 →</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>

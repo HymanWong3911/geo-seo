@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEO//SEO — 分发</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo"><div></div></div>
+      <div><div class="brand-name">GEO/SEO</div><div class="brand-sub">Control Center</div></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-section-label">首页</div>
+        <a class="nav-item" href="index.html"><span>📊</span><span>仪表盘</span><span class="nav-code">01</span></a>
+        <a class="nav-item" href="projects.html"><span>📁</span><span>项目</span><span class="nav-code">02</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">SEO 诊断</div>
+        <a class="nav-item" href="audits.html"><span>🔍</span><span>审计</span><span class="nav-code">03</span></a>
+        <a class="nav-item" href="keywords.html"><span>🔑</span><span>关键词</span><span class="nav-code">04</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">GEO 监测</div>
+        <a class="nav-item" href="geo.html"><span>🌐</span><span>GEO 概览</span><span class="nav-code">05</span></a>
+        <a class="nav-item" href="geo-runs.html"><span>📈</span><span>运行历史</span><span class="nav-code">06</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">内容运营</div>
+        <a class="nav-item" href="content.html"><span>📝</span><span>内容</span><span class="nav-code">07</span></a>
+        <a class="nav-item" href="drafts.html"><span>📄</span><span>草稿</span><span class="nav-code">08</span></a>
+        <a class="nav-item" href="review.html"><span>👀</span><span>审核</span><span class="nav-code">09</span></a>
+        <a class="nav-item active" href="distribution.html"><span>📤</span><span>分发</span><span class="nav-code">10</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">任务与报告</div>
+        <a class="nav-item" href="insights.html"><span>🤖</span><span>AI 洞察</span><span class="nav-code">11</span></a>
+        <a class="nav-item" href="tasks.html"><span>📋</span><span>任务看板</span><span class="nav-code">12</span></a>
+        <a class="nav-item" href="reports.html"><span>📑</span><span>报告</span><span class="nav-code">13</span></a>
+        <a class="nav-item" href="brand-monitor.html"><span>📡</span><span>品牌监控</span><span class="nav-code">14</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">系统</div>
+        <a class="nav-item" href="llm-usage.html"><span>💎</span><span>LLM 用量</span><span class="nav-code">15</span></a>
+        <a class="nav-item" href="system-health.html"><span>❤️</span><span>系统健康</span><span class="nav-code">16</span></a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="mono" style="font-size: 12px; color: var(--muted-foreground);">// 森田咨询 (www.sentian100.com)</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="status success">系统在线</span>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 12px;">A</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+        <div class="page-header" style="margin: 0;">
+          <div class="eyebrow">// CONTENT — Distribution</div>
+          <h1 class="page-title">分发目标</h1>
+          <p class="page-desc">将内容自动分发到 17 个平台 · 手动 / 自动模式</p>
+        </div>
+        <button class="btn primary">+ 添加目标</button>
+      </div>
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">总目标</div>
+          <div class="kpi-value">12</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">手动模式</div>
+          <div class="kpi-value">10</div>
+        </div>
+        <div class="kpi good">
+          <div class="kpi-label">自动模式</div>
+          <div class="kpi-value">2</div>
+        </div>
+        <div class="kpi warn">
+          <div class="kpi-label">启用中</div>
+          <div class="kpi-value">11</div>
+        </div>
+      </div>
+
+      <!-- Platform groups -->
+      <div class="section">
+        <div class="section-title">📤 分发目标列表</div>
+        <div class="section-desc">点击 🔌 测试连接 验证目标配置是否可达</div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">🔗</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-weight: 500;">workflow-e2e-webhook</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: var(--muted); border-radius: 4px;" class="mono">CUSTOM_WEBHOOK</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: rgba(77,182,125,0.15); color: var(--success); border-radius: 4px;" class="mono">MANUAL</span>
+                </div>
+                <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px;" class="mono">分发 3 次 · 最近 2h 前</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="status success" style="font-size: 9px;">已启用</span>
+              <button class="btn">🔌 测试连接</button>
+              <button class="btn">编辑</button>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">💬</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-weight: 500;">森田咨询-知乎专栏</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: var(--muted); border-radius: 4px;" class="mono">ZHIHU</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: rgba(77,182,125,0.15); color: var(--success); border-radius: 4px;" class="mono">AUTO@APPROVED</span>
+                </div>
+                <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px;" class="mono">分发 5 次 · 成功 4 / 失败 1</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="status success" style="font-size: 9px;">已启用</span>
+              <button class="btn">🔌 测试连接</button>
+              <button class="btn">编辑</button>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">📰</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-weight: 500;">百家号-森田咨询官方</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: var(--muted); border-radius: 4px;" class="mono">BAIJIAHAO</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: rgba(77,182,125,0.15); color: var(--success); border-radius: 4px;" class="mono">MANUAL</span>
+                </div>
+                <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px;" class="mono">分发 2 次 · 成功 1 / 失败 1</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="status success" style="font-size: 9px;">已启用</span>
+              <button class="btn">🔌 测试连接</button>
+              <button class="btn">编辑</button>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; align-items: center; justify-content: space-between; opacity: 0.6;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">💚</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-weight: 500;">微信公众号 (待配置)</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: var(--muted); border-radius: 4px;" class="mono">WECHAT_MP</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: rgba(224,163,65,0.15); color: var(--warning); border-radius: 4px;" class="mono">待配置</span>
+                </div>
+                <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px;" class="mono">需要填写 AppID + AppSecret</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 10px; color: var(--muted-foreground);" class="mono">未启用</span>
+              <button class="btn">编辑</button>
+            </div>
+          </div>
+
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; align-items: center; justify-content: space-between; opacity: 0.6;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">✈️</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-weight: 500;">飞书文档 (待配置)</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: var(--muted); border-radius: 4px;" class="mono">FEISHU_DOC</span>
+                  <span style="font-size: 10px; padding: 2px 6px; background: rgba(224,163,65,0.15); color: var(--warning); border-radius: 4px;" class="mono">待配置</span>
+                </div>
+                <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px;" class="mono">需要填写 App ID + App Secret</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 10px; color: var(--muted-foreground);" class="mono">未启用</span>
+              <button class="btn">编辑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Platform catalog -->
+      <div class="section">
+        <div class="section-title">📚 支持的 17 个平台</div>
+        <div class="section-desc">完整平台目录 · 可创建对应分发目标</div>
+        <div class="grid grid-3">
+          <div class="card">
+            <div class="card-title">// 社交平台</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 13px;">
+              <div>💬 知乎</div>
+              <div>💚 微信公众号</div>
+              <div>✈️ 飞书文档</div>
+              <div>📝 Notion</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">// 内容平台</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 13px;">
+              <div>📰 百家号</div>
+              <div>🎵 抖音/头条</div>
+              <div>📕 小红书</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">// AI 智能体</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 13px;">
+              <div>🤖 字节扣子</div>
+              <div>🔍 百度文心</div>
+              <div>🐧 腾讯元宝</div>
+              <div>📌 钉钉</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">// 搜索引擎收录</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 13px;">
+              <div>🔎 百度搜索</div>
+              <div>🐶 搜狗搜索</div>
+              <div>🔱 360搜索</div>
+              <div>🐴 神马搜索</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">// 引用 / 收录</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 13px;">
+              <div>📎 引用站点</div>
+              <div>📑 收录站点</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">// 自定义</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 13px;">
+              <div>🔗 Webhook (任意 HTTP endpoint)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEO//SEO — AI 洞察</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo"><div></div></div>
+      <div><div class="brand-name">GEO/SEO</div><div class="brand-sub">Control Center</div></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-section-label">首页</div>
+        <a class="nav-item" href="index.html"><span>📊</span><span>仪表盘</span><span class="nav-code">01</span></a>
+        <a class="nav-item" href="projects.html"><span>📁</span><span>项目</span><span class="nav-code">02</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">SEO 诊断</div>
+        <a class="nav-item" href="audits.html"><span>🔍</span><span>审计</span><span class="nav-code">03</span></a>
+        <a class="nav-item" href="keywords.html"><span>🔑</span><span>关键词</span><span class="nav-code">04</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">GEO 监测</div>
+        <a class="nav-item" href="geo.html"><span>🌐</span><span>GEO 概览</span><span class="nav-code">05</span></a>
+        <a class="nav-item" href="geo-runs.html"><span>📈</span><span>运行历史</span><span class="nav-code">06</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">内容运营</div>
+        <a class="nav-item" href="content.html"><span>📝</span><span>内容</span><span class="nav-code">07</span></a>
+        <a class="nav-item" href="drafts.html"><span>📄</span><span>草稿</span><span class="nav-code">08</span></a>
+        <a class="nav-item" href="review.html"><span>👀</span><span>审核</span><span class="nav-code">09</span></a>
+        <a class="nav-item" href="distribution.html"><span>📤</span><span>分发</span><span class="nav-code">10</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">任务与报告</div>
+        <a class="nav-item active" href="insights.html"><span>🤖</span><span>AI 洞察</span><span class="nav-code">11</span></a>
+        <a class="nav-item" href="tasks.html"><span>📋</span><span>任务看板</span><span class="nav-code">12</span></a>
+        <a class="nav-item" href="reports.html"><span>📑</span><span>报告</span><span class="nav-code">13</span></a>
+        <a class="nav-item" href="brand-monitor.html"><span>📡</span><span>品牌监控</span><span class="nav-code">14</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">系统</div>
+        <a class="nav-item" href="llm-usage.html"><span>💎</span><span>LLM 用量</span><span class="nav-code">15</span></a>
+        <a class="nav-item" href="system-health.html"><span>❤️</span><span>系统健康</span><span class="nav-code">16</span></a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="mono" style="font-size: 12px; color: var(--muted-foreground);">// 森田咨询 (www.sentian100.com)</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="status success">系统在线</span>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 12px;">A</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-header">
+        <div class="eyebrow">// AI INSIGHTS · 2026-06-28</div>
+        <h1 class="page-title">🤖 AI 洞察</h1>
+        <p class="page-desc">基于项目最近 7 天的真实数据(审计 / GEO / 品牌监控 / 分发),LLM 自动分析当前的机会、风险和推荐行动</p>
+      </div>
+
+      <!-- Project selector + meta -->
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">
+        <label class="mono" style="font-size: 11px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.1em;">项目</label>
+        <select style="padding: 6px 12px; background: var(--card); color: var(--foreground); border: 1px solid var(--border-strong); border-radius: 6px; font-size: 13px; min-width: 240px;">
+          <option>森田咨询 (www.sentian100.com)</option>
+          <option>演示项目 A</option>
+          <option>演示项目 B</option>
+        </select>
+        <span class="badge-new">🤖 LLM 洞察</span>
+        <span class="mono" style="font-size: 10px; color: var(--muted-foreground);">生成于 2026-06-28 15:23 · 缓存至 2026-06-29 15:23</span>
+        <button class="btn" style="margin-left: auto;">🔄 重新生成</button>
+      </div>
+
+      <!-- Headline -->
+      <div class="notice">
+        <h2 class="notice-title">GEO-SEO探测运行100%成功,整体健康度中等,存在分发故障与无效页面问题待修复</h2>
+        <p class="notice-summary">近7天共完成12次GEO探测,成功率100%,无负面舆情。内容分发共16次,失败7次,失败率达43.75%,当前存在1个404低评分页面,所有监控关键词均为e2e测试内容,无有效业务提及数据。</p>
+      </div>
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi bad">
+          <div class="kpi-label">SEO 均分</div>
+          <div class="kpi-value">53<span style="font-size: 14px; color: var(--muted-foreground);">/100</span></div>
+          <div class="kpi-sub">1 个低分页</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">审计次数</div>
+          <div class="kpi-value">7</div>
+          <div class="kpi-sub">最近 7 天</div>
+        </div>
+        <div class="kpi good">
+          <div class="kpi-label">GEO 成功率</div>
+          <div class="kpi-value">100<span style="font-size: 14px;">%</span></div>
+          <div class="kpi-sub">共 12 次</div>
+        </div>
+        <div class="kpi good">
+          <div class="kpi-label">负面提及</div>
+          <div class="kpi-value">0</div>
+          <div class="kpi-sub">共 50 条</div>
+        </div>
+        <div class="kpi warn">
+          <div class="kpi-label">分发成功率</div>
+          <div class="kpi-value">56<span style="font-size: 14px;">%</span></div>
+          <div class="kpi-sub">9/16</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">待审稿</div>
+          <div class="kpi-value">1</div>
+          <div class="kpi-sub">需要审核</div>
+        </div>
+      </div>
+
+      <!-- Opportunities -->
+      <div class="section">
+        <div class="section-title">🎯 机会</div>
+        <div class="section-desc">可以立即着手的改进点</div>
+        <div class="grid grid-2">
+          <div class="insight-card opp">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
+              <div class="insight-title">修复 /services 页面 404 错误</div>
+              <span class="insight-metric">score=14</span>
+            </div>
+            <p class="insight-rationale">该页面为核心服务入口,404 状态拉低站点整体 GEO 评分,影响核心服务的本地搜索曝光</p>
+            <a href="audits.html" style="font-size: 11px; color: var(--primary); margin-top: 4px;">查看审计详情 →</a>
+          </div>
+          <div class="insight-card opp">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
+              <div class="insight-title">17 个核心问题未被 AI 引擎提及</div>
+              <span class="insight-metric">unmentioned=17</span>
+            </div>
+            <p class="insight-rationale">近 7 天 GEO 运行覆盖了多个用户问题,但品牌未出现在回答中。补充针对这些问题的内容可提升引用率</p>
+            <a href="geo-runs.html" style="font-size: 11px; color: var(--primary); margin-top: 4px;">查看 GEO 数据 →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threats -->
+      <div class="section">
+        <div class="section-title">⚠️ 风险</div>
+        <div class="section-desc">需要关注的潜在问题</div>
+        <div class="grid grid-2">
+          <div class="insight-card threat">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
+              <div class="insight-title">分发失败率 43.75%</div>
+              <span class="insight-metric">failed=7/16</span>
+            </div>
+            <p class="insight-rationale">持续分发失败会延误项目内容上线节奏,无法按时提升关键词覆盖率</p>
+            <a href="distribution.html" style="font-size: 11px; color: var(--primary); margin-top: 4px;">查看分发详情 →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="section">
+        <div class="section-title">✅ 推荐行动</div>
+        <div class="section-desc">按优先级排序的可执行任务</div>
+        <div class="grid grid-2">
+          <div class="insight-card action">
+            <div style="display: flex; align-items: start; gap: 12px;">
+              <span class="priority p0">P0</span>
+              <div style="flex: 1; min-width: 0;">
+                <div class="insight-title">排查修复内容分发故障</div>
+                <p class="insight-rationale">分发失败率过高,已审批内容无法上线,是当前最紧急的问题</p>
+              </div>
+            </div>
+            <ol style="margin: 8px 0 0 28px; color: var(--muted-foreground); font-size: 12px; line-height: 1.8;">
+              <li>拉取 7 次分发失败的日志定位错误原因</li>
+              <li>修复故障后重新推送所有失败的待分发内容</li>
+              <li>验证分发结果,确认成功率恢复</li>
+            </ol>
+            <a href="distribution.html" style="font-size: 11px; color: var(--primary); margin-top: 8px; display: inline-block;">查看分发日志 →</a>
+          </div>
+          <div class="insight-card action">
+            <div style="display: flex; align-items: start; gap: 12px;">
+              <span class="priority p1">P1</span>
+              <div style="flex: 1; min-width: 0;">
+                <div class="insight-title">为 /services 页面生成优化草稿</div>
+                <p class="insight-rationale">该页评分 14,基于关键词可生成符合 SEO 规范的内容</p>
+              </div>
+            </div>
+            <ol style="margin: 8px 0 0 28px; color: var(--muted-foreground); font-size: 12px; line-height: 1.8;">
+              <li>查看 /services 审计详情</li>
+              <li>基于审计发现 + 项目关键词生成内容草稿</li>
+              <li>审核通过后分发到 webhook / 渠道</li>
+            </ol>
+            <a href="audits.html" style="font-size: 11px; color: var(--primary); margin-top: 8px; display: inline-block;">查看审计 →</a>
+          </div>
+          <div class="insight-card action">
+            <div style="display: flex; align-items: start; gap: 12px;">
+              <span class="priority p1">P1</span>
+              <div style="flex: 1; min-width: 0;">
+                <div class="insight-title">为高价值未提及问题生成内容</div>
+                <p class="insight-rationale">挑出搜索量/相关度最高的前 3 个问题,生成结构化答案</p>
+              </div>
+            </div>
+            <ol style="margin: 8px 0 0 28px; color: var(--muted-foreground); font-size: 12px; line-height: 1.8;">
+              <li>"森田咨询 提供哪些领导力培训?"</li>
+              <li>"数字化转型咨询的 ROI 如何评估?"</li>
+              <li>"中小企业如何选择战略咨询公司?"</li>
+            </ol>
+            <a href="geo-runs.html" style="font-size: 11px; color: var(--primary); margin-top: 8px; display: inline-block;">查看问题列表 →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div style="background: var(--muted); border-radius: var(--radius); padding: 16px; font-size: 12px; color: var(--muted-foreground); line-height: 1.7; margin-top: 24px;">
+        💡 <strong style="color: var(--foreground);">关于洞察来源</strong>:系统优先调用 LLM (ARK) 基于真实业务数据生成洞察,缓存 24 小时。如果 LLM 不可用,自动降级到规则启发式洞察,保证总能给出可执行建议。点击"重新生成"会强制刷新缓存。
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
