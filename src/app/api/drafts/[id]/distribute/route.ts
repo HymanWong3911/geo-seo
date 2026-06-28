@@ -33,7 +33,18 @@ export async function POST(
     const results = [];
     for (const targetId of parsed.data.targetIds) {
       const r = await distributeToTarget({ draftId: draft.id, targetId });
-      results.push({ targetId, ...r });
+      // 找刚创建的 log (按 draftId + targetId + createdAt desc)
+      const log = await prisma.distributionLog.findFirst({
+        where: { draftId: draft.id, targetId },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, status: true, externalUrl: true, errorMessage: true, attempts: true },
+      });
+      results.push({
+        targetId,
+        logId: log?.id ?? null,
+        status: log?.status ?? (r.success ? "SUCCESS" : "FAILED"),
+        ...r,
+      });
     }
 
     await audit("REPORT_EXPORT", {
