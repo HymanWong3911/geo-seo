@@ -275,12 +275,13 @@ export default function GeoRunsPage() {
                     <th className="text-right p-3">duration</th>
                     <th className="text-left p-3">started</th>
                     <th className="text-left p-3">finished</th>
+                    <th className="text-right p-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-muted-foreground text-sm">
+                      <td colSpan={9} className="p-8 text-center text-muted-foreground text-sm">
                         没有匹配的 run
                       </td>
                     </tr>
@@ -288,7 +289,11 @@ export default function GeoRunsPage() {
                     filtered.map(r => {
                       const dur = calcDuration(r.startedAt, r.finishedAt);
                       return (
-                        <tr key={r.id} className="border-t border-border hover:bg-muted/20">
+                        <tr
+                          key={r.id}
+                          className="border-t border-border hover:bg-muted/20 cursor-pointer"
+                          onClick={() => window.location.href = `/geo/runs/${r.id}?projectId=${projectId}`}
+                        >
                           <td className="p-3">
                             <span className={`badge text-[10px] font-mono ${STATUS_BADGE[r.status]}`}>
                               {r.status === "RUNNING" && <span className="inline-block h-1.5 w-1.5 rounded-full bg-current animate-pulse mr-1" />}
@@ -312,6 +317,9 @@ export default function GeoRunsPage() {
                           </td>
                           <td className="p-3 text-xs font-mono text-muted-foreground">
                             {r.finishedAt ? new Date(r.finishedAt).toLocaleString("zh-CN", { hour12: false }) : "—"}
+                          </td>
+                          <td className="p-3 text-right text-xs text-sky-600">
+                            详情 →
                           </td>
                         </tr>
                       );
