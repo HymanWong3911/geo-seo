@@ -91,6 +91,7 @@ export default function AuditDetailPage() {
   const [taskResult, setTaskResult] = useState<{ recommendations: number; tasks: number } | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "copying" | "copied" | "error">("idle");
 
   useEffect(() => {
     void (async () => {
@@ -111,6 +112,33 @@ export default function AuditDetailPage() {
       setLoading(false);
     })();
   }, [params.id]);
+
+  async function downloadMarkdown() {
+    const res = await fetch(`/api/audits/${params.id}?format=md`);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-${audit?.page.title ?? params.id}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyMarkdown() {
+    setCopyState("copying");
+    try {
+      const res = await fetch(`/api/audits/${params.id}?format=md`);
+      if (!res.ok) throw new Error("fetch failed");
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      setCopyState("error");
+      setTimeout(() => setCopyState("idle"), 2000);
+    }
+  }
 
   async function createOptimizationTasks(minSeverity: "high" | "medium" | "low" = "medium") {
     setCreatingTasks(true);
@@ -150,10 +178,30 @@ export default function AuditDetailPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <Link href="/audits" className="text-sm text-muted-foreground hover:underline">← 返回诊断列表</Link>
-        <h1 className="mt-1 text-2xl font-semibold">{audit.page.title ?? audit.page.url}</h1>
-        <p className="text-sm text-muted-foreground">
-          <a href={audit.page.url} target="_blank" rel="noreferrer" className="hover:underline">{audit.page.url}</a>
-        </p>
+        <div className="mt-1 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold truncate">{audit.page.title ?? audit.page.url}</h1>
+            <p className="text-sm text-muted-foreground">
+              <a href={audit.page.url} target="_blank" rel="noreferrer" className="hover:underline">{audit.page.url}</a>
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => void copyMarkdown()}
+              className="btn-ghost btn-sm"
+              title="复制为 Markdown,可粘贴到 Notion/飞书/微信"
+            >
+              {copyState === "copying" ? "复制中..." : copyState === "copied" ? "✓ 已复制" : copyState === "error" ? "✗ 失败" : "📋 复制"}
+            </button>
+            <button
+              onClick={() => void downloadMarkdown()}
+              className="btn-ghost btn-sm"
+              title="下载 .md 报告"
+            >
+              ⬇ 下载
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 得分卡片 */}
