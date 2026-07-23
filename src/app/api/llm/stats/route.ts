@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         _avg: { durationMs: true },
       }),
       prisma.llmCall.groupBy({
-        by: [groupBy],
+        by: [groupBy === "day" ? "createdAt" : groupBy],
         where,
         _count: { id: true },
         _sum: { totalTokens: true, promptTokens: true, completionTokens: true, costCents: true },
@@ -89,15 +89,20 @@ export async function GET(req: NextRequest) {
         costCents: totals._sum.costCents ?? 0,
         avgDurationMs: Math.round(totals._avg.durationMs ?? 0),
       },
-      grouped: grouped.map((g) => ({
-        [groupBy]: (g as Record<string, unknown>)[groupBy],
-        calls: g._count.id,
-        promptTokens: g._sum.promptTokens ?? 0,
-        completionTokens: g._sum.completionTokens ?? 0,
-        totalTokens: g._sum.totalTokens ?? 0,
-        costCents: g._sum.costCents ?? 0,
-        avgDurationMs: Math.round(g._avg.durationMs ?? 0),
-      })),
+      grouped: grouped.map((g) => {
+        const count = typeof g._count === "object" && g._count ? g._count.id ?? 0 : 0;
+        return {
+          [groupBy]: groupBy === "day"
+            ? (g as { createdAt: Date }).createdAt.toISOString().slice(0, 10)
+            : (g as Record<string, unknown>)[groupBy],
+          calls: count,
+          promptTokens: g._sum?.promptTokens ?? 0,
+          completionTokens: g._sum?.completionTokens ?? 0,
+          totalTokens: g._sum?.totalTokens ?? 0,
+          costCents: g._sum?.costCents ?? 0,
+          avgDurationMs: Math.round(g._avg?.durationMs ?? 0),
+        };
+      }),
       daily: byDay.map((d) => ({
         day: d.day.toISOString().slice(0, 10),
         calls: Number(d.calls),

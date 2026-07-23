@@ -129,6 +129,35 @@ export async function trackLLMCall<T extends string>(
  * 如果 provider 支持 completeWithUsage，使用真实 token 计数；
  * 否则使用估算值。
  */
+// 2026-07-23: 把 model 字段按 provider 路由真实模型名称,而不是锁死 DEFAULT_LLM_MODEL。
+// 三个 provider 各自从不同 env 读默认,所以分发逻辑收敛在这里。
+function resolveProviderModel(providerName: string): string {
+  switch (providerName) {
+    case "ark":
+      return process.env.ARK_MODEL ?? "ark-code-latest";
+    case "bailian":
+      return (
+        process.env.BAILIAN_MODEL
+        ?? process.env.GROK_BAILIAN_MODEL
+        ?? "qwen3.8-max-preview"
+      );
+    case "openai_compatible":
+      return process.env.DEFAULT_LLM_MODEL ?? process.env.LLM_MODEL ?? "deepseek-chat";
+    case "openai":
+      return process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+    case "anthropic":
+      return process.env.ANTHROPIC_MODEL ?? "claude-3-5-sonnet";
+    case "google":
+      return process.env.GOOGLE_MODEL ?? "gemini-1.5-pro";
+    case "custom_http":
+      return process.env.LLM_CUSTOM_HTTP_MODEL ?? "custom";
+    case "mock":
+      return "mock-synthesized";
+    default:
+      return process.env.DEFAULT_LLM_MODEL ?? "unknown";
+  }
+}
+
 export async function trackLLMCallWithUsage(
   options: TrackOptions,
   provider: LLMProvider,
@@ -157,6 +186,7 @@ export async function trackLLMCallWithUsage(
 
     const durationMs = Date.now() - start;
     const costCents = estimateCostFromTokens(usage.promptTokens, usage.completionTokens);
+    const modelName = resolveProviderModel(provider.name);
 
     // 异步写库
     void (async () => {
@@ -167,7 +197,7 @@ export async function trackLLMCallWithUsage(
             geoRunId: options.geoRunId ?? null,
             jobType: options.jobType,
             provider: provider.name,
-            model: process.env.DEFAULT_LLM_MODEL ?? "unknown",
+            model: modelName,
             promptTokens: usage.promptTokens,
             completionTokens: usage.completionTokens,
             totalTokens: usage.totalTokens,

@@ -58,27 +58,40 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export default function ContentPage() {
   const searchParams = useSearchParams();
+  // 从 URL query 中拿 projectId（来自其它页面的跳转链接）
   const projectId = searchParams.get("projectId") ?? "";
 
-  const [inputType, setInputType] = useState<"url" | "text">("url");
-  const [url, setUrl] = useState("");
-  const [content, setContent] = useState("");
-  const [contentFormat, setContentFormat] = useState<"html" | "text">("text");
-  const [keywords, setKeywords] = useState("");
-  const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState<ContentAnalysisResult | null>(null);
-  const [error, setError] = useState("");
-  const [createdCount, setCreatedCount] = useState(0);
+  // 用户输入模式与原始内容
+  const [inputType, setInputType] = useState<"url" | "text">("url"); // "url"=爬取 / "text"=直接粘贴
+  const [url, setUrl] = useState("");                          // 用户在 UI 上填写的目标 URL
+  const [content, setContent] = useState("");                  // 用户直接粘贴的正文
+  const [contentFormat, setContentFormat] = useState<"html" | "text">("text"); // "html" 时后端会按 HTML 解析
+  const [keywords, setKeywords] = useState("");                // 逗号分隔的目标关键词
+  const [analyzing, setAnalyzing] = useState(false);           // 分析请求进行中,用于禁用按钮 + 显示光标
+  const [result, setResult] = useState<ContentAnalysisResult | null>(null); // 后端回包的分析结果
+  const [error, setError] = useState("");                       // 表单/接口错误 key,由 ERROR_MESSAGES 翻译
+  const [createdCount, setCreatedCount] = useState(0);          // 已经从分析结果一键创建的任务数
   const { t } = useI18n();
 
   // 用 ref 读 DOM 实际值，避免 React state 批处理延迟
+  // 原因:在"快速打字 → 立刻点 analyze"这种场景下,React state 可能还没 flush 到 DOM,
+  // 通过 useState 读到的 url/keywords 是旧的;而 ref 始终指向当前真实 DOM 值。
   const urlRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const keywordsRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * 触发内容分析。
+   * 流程:
+   *   1. 校验 projectId 和必填字段
+   *   2. 构造请求体(url 模式 / text 模式)
+   *   3. POST /api/projects/{projectId}/content/analyze
+   *   4. 把结果 setResult 触发下面结果区渲染
+   * 失败时把 ERR key 写到 setError,由上方 [ error ] 区块显示。
+   */
   async function analyze() {
     if (!projectId) { setError("select_project_first"); return; }
-    // 用 ref 读 DOM 实际值，确保点击时拿到最新输入
+    // 用 ref 读 DOM 实际值,确保点击时拿到最新输入
     const kwRaw = keywordsRef.current?.value ?? keywords;
     const kwList = kwRaw.split(",").map((s: string) => s.trim()).filter(Boolean);
     if (kwList.length === 0) { setError("keywords_required"); return; }
@@ -88,6 +101,7 @@ export default function ContentPage() {
     setAnalyzing(true);
     setCreatedCount(0);
 
+    // 构造请求 body:targetKeywords 总是带;url 模式带 url;text 模式带 content + contentFormat
     const body: Record<string, unknown> = { targetKeywords: kwList };
     if (inputType === "url") {
       const urlVal = urlRef.current?.value ?? url;
@@ -95,7 +109,12 @@ export default function ContentPage() {
       body.url = urlVal;
     } else {
       const contentVal = contentRef.current?.value ?? content;
-      if (!contentVal || contentVal.length < 50) { setAnalyzing(false); setError("content_too_short (min 50 chars)"); return; }
+      // 50 字是后端能稳定抽到 heading/meta 的最小可信长度,太低建议拒绝
+      if (!contentVal || contentVal.length < 50) {
+        setAnalyzing(false);
+        setError("content_too_short (min 50 chars)");
+        return;
+      }
       body.content = contentVal;
       body.contentFormat = contentFormat;
     }
@@ -111,6 +130,11 @@ export default function ContentPage() {
     setResult(json.data);
   }
 
+  /**
+   * 一键把分析结果里的 taskSuggestions 创建成项目任务。
+   * 单次 POST 把全部 task 打成一个 batch,减少网络往返;
+   * 失败用 alert 弹错(粗粒度,后续可以替换成 toast)。
+   */
   async function createTasks(tasks: ContentAnalysisResult["taskSuggestions"]) {
     if (!projectId || !result) return;
     const res = await fetch("/api/tasks", {
@@ -135,9 +159,10 @@ export default function ContentPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      {/* page header */}
+      {/* 顶部 page header（页面标题 + 右侧项目选择器） */}
       <header className="page-header">
         <div className="page-header-left">
+          {/* eyebrow:小标,标着该页所属模块 M08 — Content Optimization */}
           <div className="eyebrow">// M08 — Content Optimization</div>
           <h1 className="mt-2">Content Analysis</h1>
         </div>
@@ -145,17 +170,19 @@ export default function ContentPage() {
           <ProjectSelector />
         </div>
       </header>
+      {/* 页面描述,从 i18n 拿（zh-CN / en-US） */}
       <p className="mt-4 text-sm text-muted-foreground">{t.pageDesc.content}</p>
 
       {!projectId ? (
+        // 未选项目时的空状态——直接引导用户先去项目页选一个
         <div className="empty-state">
           <span className="status-dot idle" /> select_project_first
         </div>
       ) : (
         <>
-          {/* 输入区 */}
+          {/* 输入区：tab + 表单 + 错误条 + 提交按钮 */}
           <div className="card p-6 mb-8">
-            {/* 输入模式切换 */}
+            {/* 输入模式切换：url_crawl(让后端抓) / paste_content(把全文贴进来) */}
             <div className="tabs mb-6">
               <button
                 onClick={() => setInputType("url")}
@@ -173,6 +200,7 @@ export default function ContentPage() {
 
             <div className="space-y-5">
               {inputType === "url" ? (
+                // mode=url：只显示一个目标 URL 输入框
                 <div>
                   <label className="mono-line block mb-2">page_url *</label>
                   <div className="input-field">
@@ -187,6 +215,7 @@ export default function ContentPage() {
                   </div>
                 </div>
               ) : (
+                // mode=text：让用户选 plain_text 还是 html，再给大块 textarea
                 <>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -224,6 +253,7 @@ export default function ContentPage() {
               )}
 
               <div>
+                {/* target_keywords：逗号分隔,后端会按词单元逐个跑匹配 */}
                 <label className="mono-line block mb-2">target_keywords * <span className="text-muted-foreground">(comma separated)</span></label>
                 <div className="input-field">
                   <span className="input-field-icon">›</span>
@@ -239,12 +269,14 @@ export default function ContentPage() {
               </div>
 
               {error && (
+                // 错误条：ERROR_MESSAGES 是 key→i18n 翻译表,未知 key 直接落原文
                 <div className="border border-destructive/50 bg-destructive/5 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-destructive">
                   [ error ] {ERROR_MESSAGES[error] ?? error}
                 </div>
               )}
 
               <div className="flex items-center gap-3">
+                {/* 分析按钮：keywords 为空时禁用,点击触发 analyze() */}
                 <button
                   onClick={analyze}
                   disabled={analyzing || !keywords.trim()}
@@ -259,6 +291,7 @@ export default function ContentPage() {
                   )}
                 </button>
                 {result && (
+                  // 分析成功后展示条：词数 + 命中条数
                   <span className="mono-line text-xs">
                     {result.wordCount.toLocaleString()} words · {result.findings.length} findings
                   </span>
@@ -267,10 +300,10 @@ export default function ContentPage() {
             </div>
           </div>
 
-          {/* 结果区 */}
+          {/* 结果区：只有 result 非空时才渲染,分四块 — page_info / suggested_tasks / SEO / GEO / findings */}
           {result && (
             <div className="space-y-6">
-              {/* 页面信息 */}
+              {/* 页面信息卡：把抓回来的 title/description/url + 字数一起摆出来 */}
               {result.title && (
                 <div className="card p-6">
                   <div className="eyebrow mb-3">page_info</div>
@@ -289,7 +322,7 @@ export default function ContentPage() {
                 </div>
               )}
 
-              {/* 一键建任务 */}
+              {/* 一键建任务：按 taskSuggestions 批量落入项目任务流 */}
               {result.taskSuggestions.length > 0 && (
                 <div className="card p-6 flex items-center justify-between">
                   <div>
@@ -306,7 +339,7 @@ export default function ContentPage() {
                 </div>
               )}
 
-              {/* SEO 建议 */}
+              {/* SEO 建议：title/meta/heading/keyword gap/内链/schema/通用改进 */}
               {result.seoSuggestions && (
                 <SuggestionCard title="SEO Suggestions" icon="◎">
                   <div className="grid gap-6">
@@ -321,7 +354,7 @@ export default function ContentPage() {
                 </SuggestionCard>
               )}
 
-              {/* GEO 建议 */}
+              {/* GEO 建议：定义段 + FAQ + 可被 AI 引用的小段 + 待补的品牌事实 + 通用改进 */}
               {result.geoSuggestions && (
                 <SuggestionCard title="GEO Suggestions" icon="◉">
                   <div className="grid gap-6">
@@ -355,7 +388,7 @@ export default function ContentPage() {
                 </SuggestionCard>
               )}
 
-              {/* SEO Findings */}
+              {/* SEO Findings：每条带严重等级 badge(高/中/低) */}
               {result.findings.length > 0 && (
                 <SuggestionCard title={`SEO Findings (${result.findings.length})`} icon="!">
                   <div className="space-y-2">
@@ -387,6 +420,13 @@ export default function ContentPage() {
   );
 }
 
+/**
+ * 通用建议卡片(SEO/GEO 两侧都用)。
+ * props:
+ *   - title: 卡片头标题
+ *   - icon:  卡片前的 monogram 图标(SEO=◎ / GEO=◉ / Findings=! )
+ *   - children: 自定义建议内容
+ */
 function SuggestionCard({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
     <div className="card">
@@ -399,6 +439,11 @@ function SuggestionCard({ title, icon, children }: { title: string; icon: string
   );
 }
 
+/**
+ * "带标题的小列表"通用组件。
+ * - 空数组直接返回 null,避免出现空 section 头
+ * - 列表项前用 monogram "›" 做 bullet,颜色取 primary
+ */
 function Section({ title, items }: { title: string; items: string[] }) {
   if (!items || items.length === 0) return null;
   return (

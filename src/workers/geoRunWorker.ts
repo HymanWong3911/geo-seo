@@ -167,6 +167,7 @@ export async function runGeoRunSync(job: GeoRunJob): Promise<{
   let successCount = 0;
   let failedCount = 0;
   let totalCost = 0;
+  let lastErrMsg: string | null = null;
 
   for (const question of questions) {
     try {
@@ -225,6 +226,7 @@ export async function runGeoRunSync(job: GeoRunJob): Promise<{
     } catch (err) {
       failedCount++;
       const errMsg = err instanceof Error ? err.message : String(err);
+      lastErrMsg = errMsg; // 覆盖：保留最近一次的具体原因，便于 DB 排查
       console.error(`[geo-run] question ${question.id} failed:`, errMsg);
 
       await audit("GEO_RUN_TRIGGER", {
@@ -247,6 +249,9 @@ export async function runGeoRunSync(job: GeoRunJob): Promise<{
     data: {
       status: finalStatus,
       finishedAt: new Date(),
+      totalQuestions: questions.length,
+      answeredQuestions: successCount,
+      ...(lastErrMsg ? { errorMessage: lastErrMsg.slice(0, 1000) } : {}),
     },
   });
 

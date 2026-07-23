@@ -15,6 +15,10 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Always trust the Host header (local dev / behind reverse proxy).
+  // Replaces the .env AUTH_TRUST_HOST=true hack from 2026-07-20 — keep this
+  // until we have a real NEXTAUTH_URL + reverse proxy in front.
+  trustHost: true,
   session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
   providers: [
     Credentials({

@@ -132,7 +132,7 @@ export async function GET() {
   const channelCheck = buildChecks(channels);
   const queueCheck = buildChecks(queueStats);
 
-  const allOk = dbCheck.ok && redisCheck.ok && countsCheck.ok && redisCheck.ok;
+  const allOk = dbCheck.ok && redisCheck.ok && countsCheck.ok && lastRunCheck.ok;
 
   // 渠道状态：任何可用渠道即 OK
   const availableChannels = Object.entries((channels.result ?? {}) as Record<string, { isAvailable: boolean }>)

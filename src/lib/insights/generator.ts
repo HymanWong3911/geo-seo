@@ -2,8 +2,8 @@
 // 输入:项目 ID + 近 N 天真实业务数据(audit / GEO / mentions / distribution / drafts)
 // 输出:结构化洞察(JSON),由 LLM 生成,Redis 缓存 24h。
 // LLM 失败时降级到规则启发式,确保 0 LLM 也能返回可读的洞察。
+// 环境变量由 Next.js 在 server 运行时从 .env 自动加载,这里不再显式 import dotenv。
 
-import "dotenv/config";
 import { prisma } from "@/lib/db";
 import { redis } from "@/lib/queue";
 import { getLLMProvider } from "@/lib/llm";

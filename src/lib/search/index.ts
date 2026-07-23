@@ -7,6 +7,7 @@ export type SearchProviderName =
   | "perplexity"
   | "kimi"
   | "doubao"
+  | "bailian"
   | "llm_simulation";
 
 export interface SearchMeta {
@@ -47,12 +48,14 @@ export interface ProviderDiagnostics {
 import { PerplexityProvider } from "./perplexity";
 import { KimiProvider } from "./kimi";
 import { DoubaoProvider } from "./doubao";
+import { BailianProvider } from "./bailian";
 import { LlmSimulationProvider } from "./llm_simulation";
 
 export const providers: Record<SearchProviderName, RealSearchProvider> = {
   perplexity: new PerplexityProvider(),
   kimi: new KimiProvider(),
   doubao: new DoubaoProvider(),
+  bailian: new BailianProvider(),
   llm_simulation: new LlmSimulationProvider(),
 };
 
@@ -63,7 +66,7 @@ export const searchProviders = providers;
 // 不会进入 5 次重试 + 长退避（避免 7 分钟起步）。
 // kimi / doubao 可以复用 ARK_API_KEY（ARK Coding Plan 订阅版 key 共用）。
 export function getAvailableChannels(): SearchProviderName[] {
-  const all: SearchProviderName[] = ["perplexity", "kimi", "doubao", "llm_simulation"];
+  const all: SearchProviderName[] = ["perplexity", "kimi", "doubao", "bailian", "llm_simulation"];
   return all.filter((name) => {
     const provider = providers[name];
     return provider.isAvailable();
@@ -92,6 +95,8 @@ export function getSearchProvider(
 }
 
 export function getDefaultChannels(): SearchProviderName[] {
-  const env = process.env.GEO_DEFAULT_CHANNELS ?? "perplexity,kimi,doubao";
+  // 全面替换为百炼：默认主渠道为 bailian（真实联网 + 引用）。
+  // 其他渠道仍可通过 GEO_DEFAULT_CHANNELS 显式启用。
+  const env = process.env.GEO_DEFAULT_CHANNELS ?? "bailian";
   return env.split(",").map((s) => s.trim()) as SearchProviderName[];
 }

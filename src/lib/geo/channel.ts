@@ -41,9 +41,10 @@ export async function runGeoQuestion(
   const channels = configured.filter((c) => available.has(c));
 
   if (channels.length === 0) {
-    // 没有任何配置的渠道可用：直接走 LLM fallback（不进入退避循环）
-    if (process.env.GEO_FALLBACK_TO_LLM !== "true") {
-      throw new Error("No GEO channels available and fallback disabled");
+    // 没有任何配置的渠道可用：默认走 LLM fallback（不进入退避循环）。
+    // 仅当显式 `GEO_FALLBACK_TO_LLM=false` 时才报错——以防生产环境误把 LLM 计入预算。
+    if (process.env.GEO_FALLBACK_TO_LLM === "false") {
+      throw new Error("No GEO channels available and fallback disabled (GEO_FALLBACK_TO_LLM=false)");
     }
     const llmProvider = getSearchProvider("llm_simulation");
     const result = await llmProvider.search(questionText, {
@@ -74,9 +75,9 @@ export async function runGeoQuestion(
     }
   }
 
-  // 所有可用渠道均失败，LLM fallback
-  if (process.env.GEO_FALLBACK_TO_LLM !== "true") {
-    throw new Error("All GEO channels failed and fallback disabled");
+  // 所有可用渠道均失败，LLM fallback（默认开，仅显式关）
+  if (process.env.GEO_FALLBACK_TO_LLM === "false") {
+    throw new Error("All GEO channels failed and fallback disabled (GEO_FALLBACK_TO_LLM=false)");
   }
   const llmProvider = getSearchProvider("llm_simulation");
   const result = await llmProvider.search(questionText, {

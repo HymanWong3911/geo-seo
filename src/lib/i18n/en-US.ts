@@ -62,6 +62,9 @@ export const enUS = {
       alertChannels: "Alert Channels",
       channels: "GEO Channels",
       alertLogs: "Alert History",
+      llmUsage: "LLM Usage",
+      insights: "AI Insights",
+      systemHealth: "System Health",
     },
   },
 

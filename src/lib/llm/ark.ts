@@ -39,6 +39,9 @@ export class ARKProvider implements LLMProvider {
         max_tokens: input.maxTokens ?? 2000,
         ...(input.responseFormat === "json" ? { response_format: { type: "json_object" } } : {}),
       }),
+      // 2026-07-23: 加 AbortSignal.timeout 防卡死。Node 默认 fetch 无超时,quota
+      // 限流或上游慢会无限挂起；失败抛 AbortError,被 ark.ts 包成 ARK API error。
+      signal: AbortSignal.timeout(parseInt(process.env.ARK_FETCH_TIMEOUT_MS ?? "60000")),
     });
 
     if (!res.ok) {

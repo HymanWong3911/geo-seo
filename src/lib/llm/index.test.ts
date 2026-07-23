@@ -27,9 +27,9 @@ describe("LLM provider registry", () => {
 });
 
 describe("Search provider registry", () => {
-  it("has 4 search providers", () => {
+  it("has all 5 search providers", () => {
     expect(Object.keys(searchProviders).sort()).toEqual(
-      ["doubao", "kimi", "llm_simulation", "perplexity"].sort(),
+      ["bailian", "doubao", "kimi", "llm_simulation", "perplexity"].sort(),
     );
   });
 

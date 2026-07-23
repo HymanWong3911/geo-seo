@@ -315,6 +315,8 @@ model GeoRun {
   finishedAt   DateTime?
   retryCount   Int       @default(0)
   errorMessage String?
+  totalQuestions   Int?     // 同步时记录，便于 dashboard / audit 一次性读取
+  answeredQuestions Int?     // successCount，存入后便于 mention-rate 计算
   createdAt    DateTime  @default(now())
 
   project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)

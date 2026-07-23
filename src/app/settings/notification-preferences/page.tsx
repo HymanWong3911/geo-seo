@@ -66,19 +66,24 @@ export default function NotificationPreferencesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!session?.user?.id) return;
     void (async () => {
-      // 暂时从 localStorage 读（接口 GET /api/notification-preferences 待实现）
-      const stored = typeof window !== "undefined" ? localStorage.getItem("notif-prefs") : null;
-      if (stored) {
-        try {
-          setPrefs(JSON.parse(stored));
-        } catch {
-          /* ignore */
+      setLoading(true);
+      try {
+        const res = await fetch("/api/notification-preferences");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (Array.isArray(json.data) && json.data.length > 0) {
+          setPrefs(json.data as Preference[]);
         }
+      } catch {
+        setError("加载偏好失败，显示默认值");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   }, [session?.user?.id]);
 
@@ -92,13 +97,23 @@ export default function NotificationPreferencesPage() {
 
   async function save() {
     setSaving(true);
-    // 暂时存 localStorage
-    if (typeof window !== "undefined") {
-      localStorage.setItem("notif-prefs", JSON.stringify(prefs));
+    setError(null);
+    try {
+      const res = await fetch("/api/notification-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: prefs }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
+      }
+      alert("✓ 已保存");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "保存失败");
+    } finally {
+      setSaving(false);
     }
-    await new Promise((r) => setTimeout(r, 400));
-    setSaving(false);
-    alert("✓ 已保存");
   }
 
   function selectAll(channel: ChannelKey, value: boolean) {
@@ -123,6 +138,12 @@ export default function NotificationPreferencesPage() {
           {saving ? "保存中..." : "保存"}
         </button>
       </div>
+
+      {error && (
+        <div className="card border-destructive/40 bg-destructive/5 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="card py-12 text-center">

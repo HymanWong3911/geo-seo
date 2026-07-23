@@ -30,7 +30,11 @@ interface HealthData {
   checks: {
     database: { ok: boolean; latencyMs: number };
     redis: { ok: boolean; latencyMs: number };
-    availableChannels: string[];
+    counts: { ok: boolean; latencyMs: number };
+    lastRun: { ok: boolean; latencyMs: number };
+    llmUsage24h: { ok: boolean; latencyMs: number };
+    channels: { ok: boolean; latencyMs: number; availableChannels: string[] };
+    queues: { ok: boolean; latencyMs: number };
   };
   data: {
     projectCount: number;
@@ -39,6 +43,7 @@ interface HealthData {
     brandMentionCount: number;
     llmCallCount: number;
     contentDraftCount: number;
+    availableChannels: string[];
     lastGeoRun?: { id: string; status: string; finishedAt: string; createdAt: string };
     llmStats24h?: {
       calls24h: number;

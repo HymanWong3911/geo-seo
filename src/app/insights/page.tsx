@@ -186,6 +186,7 @@ export default function InsightsPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <PageHeader
+        eyebrow="// AI INSIGHTS"
         title="AI 洞察"
         description="基于项目最近 7 天的真实数据(审计 / GEO / 品牌监控 / 分发),系统自动分析当前的机会、风险和推荐行动"
         actions={

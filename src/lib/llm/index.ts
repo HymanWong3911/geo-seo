@@ -34,6 +34,8 @@ import { AnthropicProvider } from "./anthropic";
 import { GoogleProvider } from "./google";
 import { CustomHTTPProvider } from "./custom_http";
 import { ARKProvider } from "./ark";
+import { BailianProvider } from "./bailian";
+import { MockLLMProvider } from "./mock";
 
 export const providers: Record<string, LLMProvider> = {
   openai: new OpenAIProvider(),
@@ -42,10 +44,28 @@ export const providers: Record<string, LLMProvider> = {
   google: new GoogleProvider(),
   custom_http: new CustomHTTPProvider(),
   ark: new ARKProvider(),
+  // 2026-07-23: ARK 周配额耗尽时,百炼(DashScope) 是 LLM 真实调用第一备选。
+  bailian: new BailianProvider(),
+  // 2026-07-23: ARK 配额耗尽且无 Bailian key 时,用 mock 不阻塞链路。
+  mock: new MockLLMProvider(),
 };
 
 export function getLLMProvider(name?: string): LLMProvider {
-  const key = name ?? process.env.DEFAULT_LLM_PROVIDER ?? "openai_compatible";
+  // 2026-07-23 优先级链:
+  //   1. 显式 name 参数
+  //   2. GEO_RUN_MOCK_LLM=true → mock(开发/CI 强制走本地合成)
+  //   3. BAILIAN_API_KEY 或 DASHSCOPE_API_KEY 已配置 → bailian(真实 DashScope 调用)
+  //   4. DEFAULT_LLM_PROVIDER(原生产路径,通常是 ark)
+  //
+  // 这样生产路径完全不变;mock 和 bailian 都是显式 opt-in,不会静默切换。
+  const explicit = name ?? null;
+  const key =
+    explicit ??
+    (process.env.GEO_RUN_MOCK_LLM === "true"
+      ? "mock"
+      : (process.env.BAILIAN_API_KEY ?? process.env.DASHSCOPE_API_KEY ?? process.env.GROK_BAILIAN_API_KEY)
+        ? "bailian"
+        : (process.env.DEFAULT_LLM_PROVIDER ?? "openai_compatible"));
   const provider = providers[key];
   if (!provider) {
     throw new Error(`Unknown LLM provider: ${key}`);

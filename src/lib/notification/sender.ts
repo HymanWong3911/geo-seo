@@ -58,17 +58,18 @@ export async function notify(input: NotifyInput): Promise<void> {
     }
   }
 
-  // 3. 飞书 / 企微（如果开启，复用 alert 通道）
+  // 3. 飞书 / 企微（如果开启，复用 alert 通道分发）
+  // sendAlert 会向所有 active 且订阅了该 eventType 的飞书/企微通道 fan-out，
+  // 因此 feishu 与 wecom 任一开启都只需触发一次，避免重复下发。
   if (pref.channelFeishu || pref.channelWeCom) {
-    const payload = {
-      title: input.title,
-      content: input.content ?? "",
-      link: input.link ?? "",
-    };
-    if (pref.channelFeishu) {
-      await sendAlert({ eventType: "ANOMALY_DETECTED", payload });
-    }
-    // 企微同
+    await sendAlert({
+      eventType: "ANOMALY_DETECTED",
+      payload: {
+        title: input.title,
+        content: input.content ?? "",
+        link: input.link ?? "",
+      },
+    });
   }
 }
 

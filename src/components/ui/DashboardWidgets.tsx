@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 interface DashboardSectionProps {
   title?: string
   eyebrow?: string
+  description?: string
   children: ReactNode
   actions?: ReactNode
   className?: string
@@ -15,6 +16,7 @@ interface DashboardSectionProps {
 export function DashboardSection({
   title,
   eyebrow,
+  description,
   children,
   actions,
   className = "",
@@ -29,6 +31,9 @@ export function DashboardSection({
             )}
             {title && (
               <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+            )}
+            {description && (
+              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             )}
           </div>
           {actions && <div className="flex items-center gap-2">{actions}</div>}

@@ -9,6 +9,24 @@ import { DashboardSection, MiniChart } from "@/components/ui/DashboardWidgets";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 
+interface GeoRunResult {
+  id: string;
+  answer: string;
+  providerSource: string;
+  providerAttempts: number;
+  citedUrls: string[];
+  mentionedBrands: string[];
+  mentionedCompetitors: string[];
+  primaryBrandMentioned: boolean;
+  primaryBrandRecommended: boolean;
+  sentiment: string | null;
+  position: number | null;
+  links: string[];
+  analysis: unknown;
+  createdAt: string;
+  geoQuestion: { id: string; question: string };
+}
+
 interface GeoRunDetail {
   id: string;
   status: string;
@@ -22,23 +40,7 @@ interface GeoRunDetail {
   errorMessage: string | null;
   createdAt: string;
   project: { id: string; name: string; primaryBrand: string | null };
-  results: Array<{
-    id: string;
-    answer: string;
-    providerSource: string;
-    providerAttempts: number;
-    citedUrls: string[];
-    mentionedBrands: string[];
-    mentionedCompetitors: string[];
-    primaryBrandMentioned: boolean;
-    primaryBrandRecommended: boolean;
-    sentiment: string | null;
-    position: number | null;
-    links: string[];
-    analysis: any;
-    createdAt: string;
-    geoQuestion: { id: string; question: string };
-  }>;
+  results: GeoRunResult[];
 }
 
 const SENTIMENT_STYLES: Record<string, string> = {
@@ -134,12 +136,13 @@ export default function GeoRunDetailPage() {
 
   // 按问题分组
   const byQuestion = useMemo(() => {
-    if (!run) return new Map<string, typeof run.results>();
-    const m = new Map<string, typeof run.results>();
-    for (const r of run.results) {
-      const qid = r.geoQuestion.id;
-      if (!m.has(qid)) m.set(qid, [] as any);
-      m.get(qid)!.push(r as any);
+    const results = run?.results ?? [];
+    const m = new Map<string, GeoRunResult[]>();
+    for (const result of results) {
+      const questionId = result.geoQuestion.id;
+      const groupedResults = m.get(questionId) ?? [];
+      groupedResults.push(result);
+      m.set(questionId, groupedResults);
     }
     return m;
   }, [run]);

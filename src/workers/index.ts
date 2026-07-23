@@ -1,6 +1,12 @@
 // 启动所有 worker 进程。
 // 用法：pnpm worker
 // 进程常驻（BullMQ Worker 自带事件循环 + 我们用 setInterval 保持心跳）。
+
+// 2026-07-23: ESM 会把所有 import 提升到顶部,因此其它模块（会触发 src/lib/queue
+// 读取 process.env.REDIS_URL 等）必须在 .env 加载完之后才 import。
+// 这是为什么 load-env 必须放在第一个 import:
+import "./load-env";
+
 import { pageAuditWorker } from "./pageAuditWorker";
 import { geoRunWorker } from "./geoRunWorker";
 import { contentAnalysisWorker } from "./contentAnalysisWorker";

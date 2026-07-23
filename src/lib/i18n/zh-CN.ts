@@ -64,6 +64,9 @@ export const zhCN = {
       alertChannels: "告警通道",
       channels: "GEO 渠道",
       alertLogs: "告警历史",
+      llmUsage: "LLM 用量",
+      insights: "AI 洞察",
+      systemHealth: "系统健康",
     },
   },
 

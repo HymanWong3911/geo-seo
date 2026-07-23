@@ -5,11 +5,14 @@ import { cn } from "@/lib/utils"
 
 type BadgeVariant = "default" | "success" | "warning" | "error" | "info"
 type TrendDirection = "up" | "down" | "stable"
+type LegacyAccent = "good" | "warn" | "bad" | "neutral"
 
 interface StatCardProps {
-  label: string
+  label?: string
+  title?: string
   value: string | number
   suffix?: string
+  unit?: string
   trend?: TrendDirection
   trendValue?: string
   icon?: ReactNode
@@ -18,6 +21,8 @@ interface StatCardProps {
   badge?: string
   badgeVariant?: BadgeVariant
   description?: string
+  subtext?: string
+  accent?: LegacyAccent
   sparklineData?: number[]
   onClick?: () => void
 }
@@ -47,8 +52,10 @@ const trendStyles: Record<TrendDirection, { container: string; icon: string }> =
 
 export function StatCard({
   label,
+  title,
   value,
   suffix,
+  unit,
   trend,
   trendValue,
   icon,
@@ -57,9 +64,21 @@ export function StatCard({
   badge,
   badgeVariant = "default",
   description,
+  subtext,
+  accent,
   sparklineData,
   onClick,
 }: StatCardProps) {
+  const displayLabel = label ?? title ?? ""
+  const displaySuffix = suffix ?? unit
+  const displayDescription = description ?? subtext
+  const accentClass = accent === "good"
+    ? "border-success/30"
+    : accent === "warn"
+      ? "border-warning/30"
+      : accent === "bad"
+        ? "border-destructive/30"
+        : ""
   const displayValue = typeof value === "number" 
     ? String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",") 
     : value
@@ -74,6 +93,7 @@ export function StatCard({
         hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5
         active:scale-[0.99]`,
         onClick && "cursor-pointer",
+        accentClass,
         className
       )}
     >
@@ -84,7 +104,7 @@ export function StatCard({
         {/* 头部 */}
         <div className="flex items-start justify-between mb-4">
           <span className="eyebrow text-xs uppercase tracking-wider text-muted-foreground">
-            {label}
+            {displayLabel}
           </span>
           <div className="flex items-center gap-2">
             {badge && (
@@ -105,15 +125,15 @@ export function StatCard({
           <span className="text-3xl font-bold tracking-tight tabular-nums">
             {displayValue}
           </span>
-          {suffix && (
-            <span className="text-sm font-medium text-muted-foreground">{suffix}</span>
+          {displaySuffix && (
+            <span className="text-sm font-medium text-muted-foreground">{displaySuffix}</span>
           )}
         </div>
 
         {/* 描述 */}
-        {description && (
+        {displayDescription && (
           <p className="mt-1 text-sm text-muted-foreground line-clamp-1">
-            {description}
+            {displayDescription}
           </p>
         )}
 

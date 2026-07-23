@@ -7,28 +7,29 @@ import { handleError, success } from "@/lib/api/response";
 import { calculateProjectGeoMetrics } from "@/lib/scoring/geo";
 
 // 近30天 GEO 评分趋势数据点
+// 2026-07-23: 之前误用 r.score(GeoRunResult 模型没有 score 字段),改成「主品牌被
+// AI 回答中提及的占比」即 mentionRate — 这是真实可观测的指标,直接出真实数字。
 async function getGeoTrend(projectIds: string[]) {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000);
   const runs = await prisma.geoRun.findMany({
     where: {
       projectId: { in: projectIds },
-      status: "SUCCESS",
       finishedAt: { gte: thirtyDaysAgo },
     },
-    select: { finishedAt: true, results: true },
+    select: { finishedAt: true, status: true, results: { select: { primaryBrandMentioned: true } } },
     orderBy: { finishedAt: "asc" },
   });
 
-  // 按天聚合
+  // 按天聚合:avg mentionRate (%) = sum(primaryBrandMentioned) / total results × 100
   const byDay: Record<string, { total: number; count: number }> = {};
   for (const r of runs) {
     if (!r.finishedAt) continue;
     const day = r.finishedAt.toISOString().slice(0, 10);
     if (!byDay[day]) byDay[day] = { total: 0, count: 0 };
-    const results = r.results as Array<{ score?: number }> | null;
-    if (results && results.length > 0) {
-      const avgScore = results.reduce((s, r) => s + (r.score ?? 0), 0) / results.length;
-      byDay[day].total += avgScore;
+    const total = r.results.length;
+    if (total > 0) {
+      const mentioned = r.results.filter((x) => x.primaryBrandMentioned).length;
+      byDay[day].total += (mentioned / total) * 100;
       byDay[day].count += 1;
     }
   }
