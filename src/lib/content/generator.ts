@@ -99,7 +99,9 @@ function tryParseJson(text: string): GeneratedContent | null {
 }
 
 export async function generateContent(input: GenerateContentInput): Promise<GeneratedContent> {
+  // 拿当前 LLM provider(优先级链:mock > bailian > ark,config 决定)
   const llm = getLLMProvider();
+  // 模板填充:brand / 主题 / 关键词 / 大纲(用户传的话强制走,没传就让 LLM 自由规划)
   const prompt = GENERATION_PROMPT
     .replace("{brandName}", input.brandName)
     .replace("{brandDescription}", input.brandDescription ?? "")
@@ -119,7 +121,8 @@ export async function generateContent(input: GenerateContentInput): Promise<Gene
   let parsed: GeneratedContent | null = null;
   let lastError: string = "";
 
-  // 第一次尝试：responseFormat=json + 严格 prompt
+  // 2026-07-25:重试策略 — 第一次宽 temperature(0.7)给空间,失败第二次更严格(0.4 + 更明确 system),
+  // 还能给上层 tryParseJson 一次宽容解析。LLM 输出 JSON 经常有 think 块/前缀文字,宽容解析是最后兜底。
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const text = await llm.complete({

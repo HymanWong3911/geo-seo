@@ -141,6 +141,7 @@ function stripHtml(html: string): string {
 }
 
 export async function analyzeContent(input: ContentAnalysisInput): Promise<ContentAnalysisResult> {
+  // 输入侧变量:url / html / 纯文本 / 标题 / 描述 / 抓取结果
   let url: string | undefined;
   let html: string | undefined;
   let text: string | undefined;
@@ -148,15 +149,19 @@ export async function analyzeContent(input: ContentAnalysisInput): Promise<Conte
   let description: string | undefined;
   let seoResult: SeoAnalysisResult | undefined;
 
+  // 模式 1:URL 输入 → 抓取 + SEO 工具分析
   if (input.url) {
     url = input.url;
+    // crawlPage 内部处理 UA / 跟随重定向 / 性能指标
     const crawl = await crawlPage(input.url);
     html = crawl.html;
+    // stripHtml 拿纯文本(去 script/style 标签)
     text = stripHtml(html);
+    // cheerio 解析 title + meta description
     const $ = cheerio.load(html);
     title = $("title").first().text().trim() || undefined;
     description = $('meta[name="description"]').attr("content")?.trim() || undefined;
-
+    // analyzeSeo:title/meta/h1/canonical/sitemap/robots/findings
     seoResult = analyzeSeo({
       url: crawl.url,
       finalUrl: crawl.finalUrl,
@@ -165,20 +170,24 @@ export async function analyzeContent(input: ContentAnalysisInput): Promise<Conte
       performance: crawl.performance,
     });
   } else if (input.content) {
+    // 模式 2:URL 没传,改用直接给的 content
     if (input.contentFormat === "html") {
+      // 显式声明是 HTML,走 cheerio 解析路径
       html = input.content;
       text = stripHtml(html);
       const $ = cheerio.load(html);
       title = $("title").first().text().trim() || undefined;
       description = $('meta[name="description"]').attr("content")?.trim() || undefined;
     } else {
+      // 默认纯文本,无标题/描述(用户后面自己补)
       text = input.content;
     }
   } else {
+    // 模式 3:既没 url 又没 content,显式报错
     throw new Error("必须提供 url 或 content 之一");
   }
 
-  // 加载 GEO 问题
+  // 加载关联的 GEO 问题(用来让 LLM 给针对性建议)
   let geoQuestions: Array<{ id: string; question: string }> = [];
   if (input.geoQuestionIds && input.geoQuestionIds.length > 0) {
     const { prisma } = await import("@/lib/db");
@@ -188,7 +197,7 @@ export async function analyzeContent(input: ContentAnalysisInput): Promise<Conte
     });
   }
 
-  // 调 LLM 生成建议
+  // LLM 调用:返回结构化 JSON 建议(标题 / meta / 标题结构 / 关键词缺漏 / FAQ / 定义段 / 任务列表)
   const llm = getLLMProvider();
   const prompt = GENERATION_PROMPT
     .replace("{brandName}", input.brandName)
@@ -203,7 +212,7 @@ export async function analyzeContent(input: ContentAnalysisInput): Promise<Conte
     system: "你只输出合法 JSON，不要包含任何额外文字。",
     prompt,
     responseFormat: "json",
-    temperature: 0.4,
+    temperature: 0.4,    // 稍低,给确定性更高的建议
     maxTokens: 4000,
   });
 
