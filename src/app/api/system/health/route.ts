@@ -83,12 +83,35 @@ export async function GET(req: NextRequest) {
       _sum: { totalTokens: true, costCents: true },
     });
 
-    // 4) worker 进程是否在跑 — 探测 tsx child of bash
+    // 4) worker 进程是否在跑 — 探测 tsx child of bash,返回每个进程的 pid + uptime
     const { execSync } = await import("node:child_process");
     let workerProcs = 0;
+    const workers: Array<{ pid: number; uptimeSec: number; cmd: string }> = [];
     try {
-      const out = execSync("pgrep -fl 'tsx.*workers/index' | wc -l", { encoding: "utf8", timeout: 2000 });
-      workerProcs = parseInt(out.trim(), 10) || 0;
+      const out = execSync("pgrep -fl 'tsx.*workers/index' || true", { encoding: "utf8", timeout: 2000 });
+      const lines = out.split("\n").filter((l: string) => l.trim().length > 0);
+      workerProcs = lines.length;
+      for (const line of lines) {
+        // 格式: PID CMD
+        const m = line.trim().match(/^(\d+)\s+(.+)$/);
+        if (!m) continue;
+        const pid = parseInt(m[1], 10);
+        try {
+          const elapsed = execSync(
+            `ps -o etime= -p ${pid} 2>/dev/null | tail -1 | tr -d ' '`,
+            { encoding: "utf8", timeout: 1000 },
+          );
+          // etime 格式 [[DD-]HH:]MM:SS,转秒
+          const parts = elapsed.split(/[-:]/);
+          let sec = 0;
+          if (parts.length === 4) sec = parseInt(parts[0]) * 86400 + parseInt(parts[1]) * 3600 + parseInt(parts[2]) * 60 + parseInt(parts[3]);
+          else if (parts.length === 3) sec = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+          else if (parts.length === 2) sec = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          workers.push({ pid, uptimeSec: sec, cmd: m[2].slice(0, 60) });
+        } catch {
+          workers.push({ pid, uptimeSec: -1, cmd: m[2].slice(0, 60) });
+        }
+      }
     } catch {
       workerProcs = -1;
     }
@@ -106,6 +129,7 @@ export async function GET(req: NextRequest) {
       lastGeoRun,
       queues,
       workerProcesses: workerProcs,
+      workers,
       llm24h: {
         calls: llm._count.id,
         tokens: llm._sum.totalTokens ?? 0,
