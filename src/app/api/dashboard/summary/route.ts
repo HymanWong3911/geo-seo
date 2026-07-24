@@ -147,7 +147,7 @@ export async function GET(_req: NextRequest) {
     const trend: "up" | "down" | "stable" =
       upCount > downCount ? "up" : downCount > upCount ? "down" : "stable";
 
-    return success({
+    const data = {
       total,
       avgScore: Math.round(scoreAgg._avg.score ?? 0),
       highFindings,
@@ -162,6 +162,27 @@ export async function GET(_req: NextRequest) {
       pendingTasks,
       geoTrend,
       llmCostTrend,
+    };
+
+    // 2026-07-23:加 ETag + 30s 缓存。Dashboard 端每 30s 轮询,减少 DB 压力。
+    // 用 data 的 JSON 序列化做 hash。304 命中不重算。
+    const crypto = await import("node:crypto");
+    const payload = { data, error: null };
+    const json = JSON.stringify(payload);
+    const etag = '"' + crypto.createHash("md5").update(json).digest("hex") + '"';
+    if (_req.headers.get("if-none-match") === etag) {
+      return new Response(null, {
+        status: 304,
+        headers: { ETag: etag, "Cache-Control": "max-age=30, must-revalidate" },
+      });
+    }
+    return new Response(json, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ETag: etag,
+        "Cache-Control": "max-age=30, must-revalidate",
+      },
     });
   } catch (err) {
     return handleError(err);
