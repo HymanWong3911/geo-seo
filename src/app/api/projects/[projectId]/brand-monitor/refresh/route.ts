@@ -16,7 +16,7 @@ export async function POST(
 
     const project = await prisma.project.findUnique({
       where: { id: params.projectId },
-      include: { brands: true, competitors: true },
+      include: { brands: true, competitors: true, keywords: true },
     });
     if (!project) throw Errors.notFound("项目");
 
@@ -36,6 +36,7 @@ export async function POST(
       projectId: params.projectId,
       brands: brandAliases,
       competitors: competitorNames,
+      keywords: project.keywords.slice(0, 3).map((k: { text: string }) => k.text),
     });
 
     await audit("REPORT_EXPORT", {

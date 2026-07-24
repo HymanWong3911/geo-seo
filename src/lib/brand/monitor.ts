@@ -8,6 +8,7 @@ export interface BrandMonitorInput {
   projectId: string;
   brands: string[];       // 主品牌 + 别名
   competitors: string[];
+  keywords?: string[];    // 项目关键词(提升查询相关性 + 内容过滤)
   sinceDays?: number;
   maxResults?: number;
 }
@@ -160,21 +161,38 @@ export async function monitorBrand(
     })),
   ];
 
+  // 项目关键词(取前 3 个,避免 query 太长)
+  const kwList = (input.keywords ?? []).slice(0, 3);
+
   for (const q of queries) {
+    // 2026-07-23:query 拼接关键词,提升搜索引擎相关性
+    // 例: query = `森田连锁咨询 连锁咨询 加盟` 而不是只 `森田连锁咨询`
+    // 同时:keyword set 后面用于过滤"内容不沾关键词/品牌"的结果
+    const kwSuffix = kwList.length > 0 ? " " + kwList.join(" ") : "";
+    const searchQuery = `${q.name}${kwSuffix}`;
+
     // 多源抓取：SearXNG 聚合（google + bing + 360 + sogou）优先，Bing 直连兜底
-    let hits = await searchSearXNG(q.name, maxResults);
-    if (hits.length === 0) hits = await searchBing(q.name, maxResults);
-    if (hits.length === 0) hits = await searchDuckDuckGo(q.name, maxResults);
-    if (hits.length === 0) hits = await search360Independent(q.name, maxResults);
+    let hits = await searchSearXNG(searchQuery, maxResults);
+    if (hits.length === 0) hits = await searchBing(searchQuery, maxResults);
+    if (hits.length === 0) hits = await searchDuckDuckGo(searchQuery, maxResults);
+    if (hits.length === 0) hits = await search360Independent(searchQuery, maxResults);
     hits = hits.slice(0, maxResults);
 
     for (const h of hits) {
       const text = `${h.title} ${h.content}`;
+      // 2026-07-23:过滤与品牌/关键词都无关的内容
+      const lower = text.toLowerCase();
+      const brandHit = lower.includes(q.name.toLowerCase());
+      const kwHit = kwList.some((k) => lower.includes(k.toLowerCase()));
+      if (!brandHit && !kwHit) continue; // 丢弃不相关
+
       const sentiment = analyzeSentiment(text);
-      const relevanceScore = Math.min(
-        100,
-        h.title.toLowerCase().includes(q.name.toLowerCase()) ? 85 : 50,
-      );
+      // relevance: brand name(85) + 关键词 hit 加成(每中 1 个 +5,封顶 100)
+      let relevanceScore = brandHit ? 85 : 50;
+      if (kwHit) {
+        const kwMatches = kwList.filter((k) => lower.includes(k.toLowerCase())).length;
+        relevanceScore = Math.min(100, relevanceScore + kwMatches * 5);
+      }
 
       results.push({
         source: h.engine ?? "bing",
