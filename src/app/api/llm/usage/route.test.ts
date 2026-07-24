@@ -58,7 +58,12 @@ describe("GET /api/llm/usage", () => {
 
   it("returns totals + byModel + byProvider + byJobType + byDay", async () => {
     const res = await GET(buildReq("?days=7") as never);
-    const data = (res as unknown as { body: { data: { totals: { calls: number }; byModel: Array<{ model: string }> } } }).body.data;
+    const data = (res as any).body.data as {
+      totals: { calls: number; totalTokens: number; recordedCostCents: number; avgDurationMs: number };
+      byModel: Array<{ model: string; provider: string; calls: number }>;
+      byProvider: Array<{ provider: string }>;
+      byJobType: Array<{ jobType: string }>;
+    };
     expect(data.totals.calls).toBe(50);
     expect(data.totals.totalTokens).toBe(90000);
     expect(data.totals.recordedCostCents).toBe(18);
