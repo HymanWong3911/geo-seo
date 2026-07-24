@@ -84,8 +84,12 @@ describe("GET /api/system/health", () => {
     mockAggregate.mockResolvedValueOnce({ _count: { id: 600 }, _sum: { totalTokens: 80000, costCents: 20 } });
     mockExecSync.mockReturnValueOnce("1137 npm exec tsx\n1176 node tsx\n1182 /opt/x\n");
 
-    const res = await GET(new Request("http://x/api/system/health") as never, ctx() as never);
-    const data = (res as { body: { data: { counts: { projectCount: number }; workerProcesses: number; queues: Record<string, { failed: number }> } } }).body.data;
+    const res = await GET(new Request("http://x/api/system/health") as never) as any;
+    const data = res.body.data as {
+      counts: { projectCount: number };
+      workerProcesses: number;
+      queues: Record<string, { failed: number; completed: number }>;
+    };
     expect(data.counts.projectCount).toBe(5);
     expect(data.workerProcesses).toBe(3);
     expect(data.queues["geo-run"].failed).toBe(1);
@@ -94,7 +98,7 @@ describe("GET /api/system/health", () => {
 
   it("returns 500 when requireSession throws", async () => {
     mockRequireSession.mockRejectedValue(new Error("unauthorized"));
-    const res = await GET(new Request("http://x/api/system/health") as never, ctx() as never);
-    expect((res as { status: number }).status).toBe(500);
+    const res = await GET(new Request("http://x/api/system/health") as never) as any;
+    expect(res.status).toBe(500);
   });
 });
