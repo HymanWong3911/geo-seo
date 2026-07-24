@@ -21,6 +21,7 @@
     "audit": "tsx scripts/audit.ts",
     "smoke": "tsx --env-file=.env scripts/smoke.ts",
     "smoke:full": "tsx --env-file=.env scripts/smoke-full.ts",
+    "demo:seed": "tsx --env-file=.env scripts/demo-seed.ts",
     "llm:test": "tsx --env-file=.env scripts/test_ark.ts"
   },
   "dependencies": {

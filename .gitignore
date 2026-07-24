@@ -41,3 +41,8 @@ coverage/
 # local dev
 /tmp/
 /.swc/
+
+# 2026-07-23:保护 sed/cp 备份,避免误提交本地 dev .env
+.env.bak*
+.env.bak-*
+*.bak2

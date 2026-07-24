@@ -122,8 +122,10 @@ export default function DashboardPage() {
     return () => { cancelled = true; clearInterval(id); };
   }, [projectId]);
 
-  const mockGeoTrend = stats?.geoTrend?.slice(-7).map(d => d.score) || [];
-  const mockCostTrend = (stats?.llmCostTrend?.slice(-7).map(d => d.cost) ?? []).map(v => v * 10);
+  // 趋势数据(直接来自 /api/dashboard/summary)。注:之前 cost ×10 是把展示稀释的占位,
+  // 现在展示真实 ¥ 值,投资 demo 数字更可信。
+  const geoTrendValues = stats?.geoTrend?.slice(-7).map(d => d.score) || [];
+  const costTrendValues = stats?.llmCostTrend?.slice(-7).map(d => d.cost) ?? [];
 
   // 品牌提及情感百分比
   const sentiments = systemStats?.brandMentions;
@@ -331,17 +333,40 @@ export default function DashboardPage() {
           <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="eyebrow">GEO 评分</span>
-                <ScoreRing score={stats?.geo.score ?? 0} size={32} strokeWidth={2} />
+                <span className="eyebrow">GEO 评分(主品牌被 AI 提及率)</span>
+                <div className="flex items-center gap-3">
+                  {stats?.geoTrend && stats.geoTrend.length > 0 && (
+                    <span className="text-sm font-mono tabular-nums">
+                      今日 {stats.geoTrend[stats.geoTrend.length - 1].score}%
+                    </span>
+                  )}
+                  <ScoreRing score={stats?.geo.score ?? 0} size={32} strokeWidth={2} />
+                </div>
               </div>
-              <MiniChart data={mockGeoTrend.length > 0 ? mockGeoTrend : [0]} color="success" height={48} />
+              <MiniChart data={geoTrendValues.length > 0 ? geoTrendValues : [0]} color="success" height={48} />
+              {stats?.geoTrend && stats.geoTrend.length > 0 && (
+                <div className="mt-1 flex justify-between font-mono text-[9px] text-muted-foreground tabular-nums">
+                  {stats.geoTrend.map((p) => (
+                    <span key={p.date}>{p.date.slice(5)}</span>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="eyebrow">LLM 成本</span>
-                <span className="text-sm font-mono tabular-nums">¥{(stats?.llmCostThisMonth ?? 0).toFixed(2)}</span>
+                <span className="eyebrow">LLM 成本 (本月)</span>
+                <span className="text-sm font-mono tabular-nums text-warning">
+                  ¥{(stats?.llmCostThisMonth ?? 0).toFixed(3)}
+                </span>
               </div>
-              <MiniChart data={mockCostTrend.length > 0 ? mockCostTrend : [0]} color="warning" height={48} />
+              <MiniChart data={costTrendValues.length > 0 ? costTrendValues : [0]} color="warning" height={48} />
+              {stats?.llmCostTrend && stats.llmCostTrend.length > 0 && (
+                <div className="mt-1 flex justify-between font-mono text-[9px] text-muted-foreground tabular-nums">
+                  {stats.llmCostTrend.map((p) => (
+                    <span key={p.date}>{p.date.slice(5)}</span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="pt-3 border-t border-border text-[10px] font-mono text-muted-foreground space-y-1">
               <div className="flex justify-between"><span>LLM calls · 30d</span><span className="tabular-nums">{systemStats?.llmCalls.total30d ?? 0}</span></div>

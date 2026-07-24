@@ -283,5 +283,5 @@ export const geoRunWorker = new Worker<GeoRunJob>(
   async (job) => {
     return runGeoRunSync(job.data);
   },
-  { connection, concurrency: 3 },
+  { connection, concurrency: parseInt(process.env.GEO_WORKER_CONCURRENCY ?? "5") },
 );

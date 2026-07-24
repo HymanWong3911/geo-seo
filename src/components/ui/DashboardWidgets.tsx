@@ -51,6 +51,12 @@ interface MiniChartProps {
   height?: number
   showArea?: boolean
   className?: string
+  /** 可选:每个数据点对应的标签(等同 data 长度)。渲染时浮在点上 */
+  labels?: string[]
+  /** 是否显示最后值在角落 */
+  showLastValue?: boolean
+  /** 显示方式:'raw' 或 'percent'(自动 *100 加 %)— 用于 dashboard trend */
+  format?: "raw" | "percent" | "currency"
 }
 
 export function MiniChart({
@@ -59,6 +65,9 @@ export function MiniChart({
   height = 48,
   showArea = true,
   className = "",
+  labels,
+  showLastValue = false,
+  format = "raw",
 }: MiniChartProps) {
   const max = Math.max(...data, 1)
   const min = Math.min(...data)
@@ -71,13 +80,17 @@ export function MiniChart({
     info: "hsl(var(--info))",
   }
 
-  const points = data.map((value, index) => {
-    const x = (index / (data.length - 1)) * 100
-    const y = 100 - ((value - min) / range) * 80 - 10
-    return `${x},${y}`
-  }).join(" ")
+  // data.length < 2 时 x = index / 0 = NaN。直接画 placeholder(空 polyline + 一个点)
+  const points =
+    data.length >= 2
+      ? data.map((value, index) => {
+          const x = (index / (data.length - 1)) * 100
+          const y = 100 - ((value - min) / range) * 80 - 10
+          return `${x},${y}`
+        }).join(" ")
+      : "50,50"
 
-  const fillPoints = `0,100 ${points} 100,100`
+  const fillPoints = data.length >= 2 ? `0,100 ${points} 100,100` : "0,100 50,50 100,100"
 
   return (
     <svg

@@ -176,16 +176,26 @@ describeMaybe("E2E: GEO 监测完整流程", () => {
         questionIds: string[];
         _count: { results: number };
       }>;
-      target = runs.find(
-        (x) => x.questionIds.includes(questionId) && x.status !== "RUNNING" && x.status !== "PENDING",
-      ) ?? null;
+      // 2026-07-23: 只接受有 results 的 SUCCESS / PARTIAL_FAILURE,跳过 0 结果的 FAILED
+      // (后者通常意味着 LLM 出错或 worker 半路死亡,在 demo/真实流量中也算"失败")
+      target =
+        runs.find(
+          (x) =>
+            x.questionIds.includes(questionId) &&
+            (x.status === "SUCCESS" || x.status === "PARTIAL_FAILURE") &&
+            x._count.results > 0,
+        ) ?? null;
       if (target) break;
       await new Promise((r) => setTimeout(r, 5_000));
     }
-    expect(target).toBeTruthy();
-    expect(["SUCCESS", "PARTIAL_FAILURE", "FAILED"]).toContain(target!.status);
-    runId = target!.id;
-    resultCount = target!._count.results;
+    if (!target) {
+      throw new Error(
+        `5 分钟内没有跑出带 results 的 GEO run (最近一次 lastRun 状态请查 /api/dashboard/summary)`,
+      );
+    }
+    expect(["SUCCESS", "PARTIAL_FAILURE"]).toContain(target.status);
+    runId = target.id;
+    resultCount = target._count.results;
   }, 5 * 60_000 + 10_000);
 
   it("M4: 验证 GeoRunResult 已落库", async () => {
