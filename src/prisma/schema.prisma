@@ -108,6 +108,7 @@ enum AlertChannelType {
   FEISHU
   WECOM
   EMAIL
+  SLACK
 }
 
 enum AlertEventType {

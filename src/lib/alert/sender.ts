@@ -61,6 +61,25 @@ async function sendWeCom(webhookUrl: string, payload: Record<string, unknown>): 
   }
 }
 
+// 2026-07-23:加 Slack incoming webhook 支持
+async function sendSlack(webhookUrl: string, payload: Record<string, unknown>): Promise<boolean> {
+  try {
+    const blocks = [
+      { type: "header", text: { type: "plain_text", text: `📊 ${payload.title ?? "GEO 告警"}` } },
+      { type: "section", text: { type: "mrkdwn", text: formatMarkdown(payload) } },
+    ];
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blocks }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("[alert:slack]", err);
+    return false;
+  }
+}
+
 function formatMarkdown(p: Record<string, unknown>): string {
   const lines: string[] = [];
   if (p.title) lines.push(`**${p.title}**`);
@@ -99,6 +118,8 @@ export async function sendAlert(input: SendAlertInput): Promise<void> {
         success = await sendFeishu(config.webhookUrl, input.payload);
       } else if (channel.type === "WECOM" && typeof config.webhookUrl === "string") {
         success = await sendWeCom(config.webhookUrl, input.payload);
+      } else if (channel.type === "SLACK" && typeof config.webhookUrl === "string") {
+        success = await sendSlack(config.webhookUrl, input.payload);
       } else if (channel.type === "EMAIL") {
         const to = (Array.isArray(config.to) ? config.to : defaultRecipients) as string[];
         if (to.length > 0) {
