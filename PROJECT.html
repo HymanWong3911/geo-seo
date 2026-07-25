@@ -245,7 +245,7 @@ AlertEvent     { id, channelId, eventType, payload, status, sentAt }</pre>
 
 <hr>
 
-<h2>🔌 关键 API 端点(投资人 demo 用)</h2>
+<h2>🔌 关键 API 端点(demo 用)</h2>
 <table>
   <tr><th>类别</th><th>端点</th><th>用途</th></tr>
   <tr><td>健康</td><td><span class="mono">GET /api/health</span></td><td>db / redis / llm / queues 全健康检查</td></tr>
@@ -271,7 +271,7 @@ AlertEvent     { id, channelId, eventType, payload, status, sentAt }</pre>
 
 <hr>
 
-<h2>🧪 端到端 demo 操作流(投资人用)</h2>
+<h2>🧪 端到端 demo 操作流</h2>
 <div class="flow">
   <div class="step">打开 <span class="mono">/dashboard</span> — 5 项目 / 趋势图(7-23 mention 28% up 趋势)</div>
   <div class="step">点 <span class="mono">/system/health</span> — 队列 + workers 数组(pid + uptime)</div>
@@ -282,7 +282,7 @@ AlertEvent     { id, channelId, eventType, payload, status, sentAt }</pre>
   <div class="step">跑 <span class="mono">pnpm demo:seed</span> 抓 8 JSON dump 到 <span class="mono">/tmp/demo-dumps/</span></div>
 </div>
 
-<pre><span class="c"># 投资人 demo 命令(任意一台 dev 机跑即可)</span>
+<pre><span class="c"># demo 命令(任意一台 dev 机跑即可)</span>
 <span class="k">$</span> pnpm install
 <span class="k">$</span> pnpm docker:up            <span class="c"># 起 redis + postgres</span>
 <span class="k">$</span> pnpm prisma:migrate:deploy
@@ -297,7 +297,7 @@ AlertEvent     { id, channelId, eventType, payload, status, sentAt }</pre>
 
 <hr>
 
-<h2>🛠 技术栈(投资人理解架构用)</h2>
+<h2>🛠 技术栈(理解架构用)</h2>
 <table>
   <tr><th>层</th><th>技术</th><th>为什么选</th></tr>
   <tr><td>前端</td><td>Next.js 14 App Router + Tailwind + 自研 monogram UI</td><td>SSR + RSC 体验好,SEO 友好</td></tr>
@@ -337,7 +337,7 @@ AlertEvent     { id, channelId, eventType, payload, status, sentAt }</pre>
 
 <hr>
 
-<h2>🛣 路线图(投资人关注的下一步)</h2>
+<h2>🛣 路线图(关注的下一步)</h2>
 <table>
   <tr><th>阶段</th><th>目标</th><th>状态</th></tr>
   <tr><td><b>现在</b></td><td>GEO 监测 + brand monitor + 内容优化基础闭环,5 项目 1,648 LLM calls 跑通</td><td>✅ 跑通</td></tr>
