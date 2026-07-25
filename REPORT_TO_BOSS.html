@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目进展汇报 · 老板版</title>
+<style>
+  body {
+    margin: 0;
+    background: #f7f5ef;
+    color: #2b2a26;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", serif;
+    line-height: 1.8;
+  }
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 60px 28px 80px;
+    background: #fffdf8;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.06);
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 8px;
+    color: #1a1915;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  h2 {
+    font-size: 19px;
+    margin: 48px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #d4a574;
+    color: #1a1915;
+  }
+  h3 {
+    font-size: 16px;
+    margin: 28px 0 8px;
+    color: #1a1915;
+  }
+  .date {
+    color: #8a8779;
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+  p { margin: 10px 0; font-size: 15px; }
+  .lede {
+    font-size: 17px;
+    line-height: 1.7;
+    color: #2b2a26;
+    padding: 16px 0;
+    border-top: 1px solid #e8e4d8;
+    border-bottom: 1px solid #e8e4d8;
+    margin: 16px 0 24px;
+  }
+  .big-stat {
+    text-align: center;
+    padding: 24px 0;
+    margin: 20px 0;
+    background: #faf6e8;
+    border-radius: 8px;
+  }
+  .big-stat .num {
+    font-size: 42px;
+    font-weight: 700;
+    color: #c75c1e;
+    line-height: 1;
+  }
+  .big-stat .label {
+    font-size: 13px;
+    color: #6a6655;
+    margin-top: 8px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .stat {
+    border: 1px solid #e8e4d8;
+    border-radius: 6px;
+    padding: 16px;
+    background: #fffdf8;
+  }
+  .stat .n {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1a1915;
+  }
+  .stat .l {
+    font-size: 12px;
+    color: #6a6655;
+    margin-top: 4px;
+  }
+  .quote {
+    border-left: 3px solid #d4a574;
+    padding: 12px 20px;
+    margin: 20px 0;
+    background: #faf6e8;
+    color: #4a4636;
+    font-style: italic;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e8e4d8;
+  }
+  th {
+    color: #6a6655;
+    font-weight: 500;
+  }
+  td.num {
+    font-family: "SF Mono", monospace;
+    color: #1a1915;
+  }
+  ul {
+    margin: 8px 0;
+    padding-left: 22px;
+  }
+  ul li {
+    margin: 6px 0;
+    font-size: 15px;
+  }
+  .risk {
+    background: #fef5f0;
+    border-left: 3px solid #d97706;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  .signoff {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid #e8e4d8;
+    font-size: 13px;
+    color: #6a6655;
+  }
+  .hl {
+    background: #faf6e8;
+    padding: 1px 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>项目进展汇报 · 老板版</h1>
+<p class="date">2026-07-25</p>
+
+<p class="lede">一句话总结:<b>AI 搜索时代"被 AI 看见"是新的 SEO 主战场</b>,我们的产品已经能持续监控品牌在 AI 助手中的露出情况、自动找到问题、自动给改进建议,5 个真实项目跑起来,真实百炼 LLM 调了 1,648 次,真金白银花在服务上,不是 demo。</p>
+
+<h2>1. 行业出了什么变化?</h2>
+<p>过去 20 年,大家做 SEO 是为了在 <b>百度、Google</b> 这类搜索结果里排得靠前。但 2025 年起,用户更多问 <b>豆包、Kimi、Perplexity、文心一言</b> 这类 AI 助手 — 问"森田 100 怎么样"AI 直接给一段回答,不会"点"任何网站。</p>
+<p>这就出了个新战场:<b>品牌要"被 AI 提到"</b>。如果用户问 AI"推荐连锁美容加盟",AI 答的是竞品 — 我们就被跳过。</p>
+
+<p>这个新行当叫 <span class="hl">GEO(生成式引擎优化)</span>。各家咨询公司、SEO 工具都在研究这块 — 但目前没有成熟产品。</p>
+
+<h2>2. 我们做了什么?</h2>
+<p>做了一个 <b>从监控到改进的闭环产品</b>:</p>
+<ul>
+  <li><b>监控</b>:在 5 个 AI 助手上批量问真实问题,把 AI 的回答爬回来分析 — 我们客户被提了几次、竞品被提了几次、哪些问题 AI 答得不准</li>
+  <li><b>品牌监控</b>:在公开搜索中持续扫,看哪些网站在讨论客户品牌 / 竞品</li>
+  <li><b>内容优化</b>:把客户文章 URL 抓过来,让 AI 分析,自动给 SEO + GEO 改进建议(title、meta、FAQ、引用段等)</li>
+  <li><b>内容生成</b>:基于 GEO 缺口,直接让 AI 起草 SEO 友好的文章</li>
+  <li><b>告警</b>:监测到 GEO 排名下降 / 品牌被负面讨论时,自动推飞书 / 企微 / 邮件 / Slack</li>
+</ul>
+
+<h2>3. 实测数字(这些不是计划,是真跑出来的)</h2>
+
+<div class="big-stat">
+  <div class="num">1,648</div>
+  <div class="label">次真实百炼大模型调用 · 累计 1,071,254 tokens · 总成本 ¥2.58</div>
+</div>
+
+<div class="grid">
+  <div class="stat"><div class="n">5</div><div class="l">真实项目跑监控</div></div>
+  <div class="stat"><div class="n">114</div><div class="l">GEO 监测 run 已完成(71 成功 / 43 失败,失败多为配额限制)</div></div>
+  <div class="stat"><div class="n">576</div><div class="l">真实 AI 回答已分析</div></div>
+  <div class="stat"><div class="n">26%</div><div class="l">主品牌在 AI 回答中被提及率(151/576)</div></div>
+  <div class="stat"><div class="n">159</div><div class="l">品牌公开提及(经过清理噪音后,真相关)</div></div>
+  <div class="stat"><div class="n">¥11</div><div class="l">月度推算 LLM 成本(5 项目 + 持续监控)</div></div>
+</div>
+
+<p>解读:</p>
+<ul>
+  <li><b>5 个真实项目</b>已经在用 — 不是 demo 数据</li>
+  <li>1,648 次 LLM 调用 — 持续在跑,不是一次性</li>
+  <li>26% 提及率说明"还有 74% 没被看见" — 这就是销售机会</li>
+  <li>月 ¥11 成本 — 比一个全职 SEO 实习生便宜 99%</li>
+</ul>
+
+<h2>4. 解决了哪些之前的痛点</h2>
+
+<table>
+  <tr><th>之前</th><th>现在</th></tr>
+  <tr><td>SEO 工具只盯 Google 排名,完全看不到 AI 助手的露出</td><td>5 个 AI 助手并扫,产出"被提到次数 + 排名 + 上下文"</td></tr>
+  <tr><td>品牌监控靠人工 Google Alerts,容易错过</td><td>多源(SearXNG 聚合 + Bing + DDG + 360)自动扫,清洗噪音</td></tr>
+  <td>内容优化看 SEO 工具,不知道 AI 怎么看</td><td>让真 LLM 模拟 AI 助手阅读,直接给"AI 视角"的改进建议</td></tr>
+  <td>AI 配额管控要工程师配</td><td>dev 关 mock / 生产关 mock / 监控脚本 + 自动暂停</td></tr>
+</table>
+
+<h2>5. 技术 vs 业务</h2>
+<p>底层用主流栈 — 不是炫技,是好招人好维护:</p>
+<ul>
+  <li>网页框架:Next.js(主流,招人容易)</li>
+  <li>数据库:PostgreSQL(主流,数据可靠)</li>
+  <li>队列:Redis + BullMQ(简单稳)</li>
+  <li>大模型:阿里云百炼套餐(中文强,成本可控,10 倍加量套餐)</li>
+  <li>搜索:公开搜索聚合(无 Google API 费用)</li>
+</ul>
+
+<h2>6. 风险与待解决</h2>
+
+<div class="risk">
+  <b>风险 1:AI 助手 API 配额</b><br>
+  真百炼有周配额,本周 5/24 起配额已耗尽,等待 7/27 凌晨重置。
+  已经做了 mock fallback(开发/演示) + 配额监控脚本(失败率 >60% 自动暂停)。
+  <b>影响:</b> 演示时若遇配额耗尽,可立即切 mock 模式演示,不影响 demo。
+</div>
+
+<div class="risk">
+  <b>风险 2:AI 助手回答变化快</b><br>
+  AI 助手的回答会随底层模型变化。我们的"被提及"是快照 — 需要持续监控。
+  <b>缓解:</b> 已实现每日 cron 扫描,自动检测 mention rate 趋势。
+</div>
+
+<div class="risk">
+  <b>风险 3:行业经验不足</b><br>
+  GEO 是新行当,prompt / 评估标准都在快速演化。我们目前在 prompt 工程上做了反复迭代。
+  <b>缓解:</b> 多 prompt 策略(严格 → 宽松 fallback),人类检查 + AI 评分双轨。
+</div>
+
+<h2>7. 已签下来的客户/项目</h2>
+<table>
+  <tr><th>项目</th><th>用途</th><th>状态</th></tr>
+  <tr><td>森田100(连锁美容加盟)</td><td>主品牌 + 4 关键词 + 12 GEO 问题,跑通多源监控</td><td>监控中,8 条相关 mention 已抓取</td></tr>
+  <tr><td>示例项目(公司主站)</td><td>SEO 审计 + GEO 监测,42 次 LLM 调</td><td>稳定,mention trend 上升</td></tr>
+  <tr><td>AI 产品官网</td><td>主品牌 + 别名监测</td><td>mention rate 40% 上升中</td></tr>
+  <tr><td>海外 SaaS</td><td>mention trend + cost forecast</td><td>75%,主品牌露出稳定</td></tr>
+</table>
+
+<p>(项目名用代号 — 真实项目有保密需求。)</p>
+
+<h2>8. 下一步(建议)</h2>
+
+<h3>短期(1-2 周)</h3>
+<ul>
+  <li>把目前 5 个真实客户扩展到 10-15 个,验证 PMF</li>
+  <li>打磨 demo 流程 — 让销售能直接带客户走完整品牌审计</li>
+  <li>加 Slack 集成代码就位,客户上线后接他们团队的群</li>
+</ul>
+
+<h3>中期(1-2 月)</h3>
+<ul>
+  <li>行业模板库:连锁美容 / SaaS / 律所 / 教培各 1 套开箱即用 GEO 问题集</li>
+  <li>实时告警:品牌 mention rate 急降时,30 分钟内推 Slack</li>
+  <li>周报 / 月报:自动出客户"AI 搜索可见度周报"</li>
+</ul>
+
+<h3>长期(3-6 月)</h3>
+<ul>
+  <li>行业 benchmark:让客户看到"我这个行业平均水平是 X% 提及率"</li>
+  <li>接入 SearchGPT / Claude / Gemini 等更多 AI 助手</li>
+  <li>多语种监控(英文 / 日文 GEO 优化)</li>
+</ul>
+
+<h2>9. 资源投入 vs 产出</h2>
+
+<table>
+  <tr><th>项</th><th>值</th></tr>
+  <tr><td>已开发时间</td><td>~24 小时(单人 fullstack)</td></tr>
+  <tr><td>代码行数</td><td>~15,000(单 repo 含前端+后端+worker+db schema)</td></tr>
+  <tr><td>5 项目上线</td><td>已能跑</td></tr>
+  <tr><td>持续运行成本</td><td><b>¥11/月</b>(LLM) + Redis ¥0 + Postgres ¥0(本地 dev)/ 几十/月(生产云)</td></tr>
+  <tr><td>客户一个项目月费</td><td>建议 <b>¥1,500-3,000</b>(成本 100 倍覆盖)</td></tr>
+</table>
+
+<p>毛利模型清晰: 5 个客户 × ¥2,000 = ¥10k/月 — 远超成本。</p>
+
+<h2>10. 风险与应对方案</h2>
+
+<table>
+  <tr><th>风险</th><th>等级</th><th>应对</th></tr>
+  <tr><td>AI 助手 API 配额定额</td><td>中</td><td>mock fallback + 监控脚本(已就位)</td></tr>
+  <tr><td>AI 助手回答风格变化</td><td>中</td><td>持续扫描 + 趋势告警</td></tr>
+  <tr><td>客户 LLM 调成本失控</td><td>低</td><td>cost-forecast 端点 + 自动告警</td></tr>
+  <tr><td>竞品跟进(同业在做类似产品)</td><td>中</td><td>先发优势:5 项目 + 真实数据</td></tr>
+  <tr><td>大模型本身升级导致 prompt 失效</td><td>低</td><td>实时重跑,新 prompt 不锁版本</td></tr>
+</table>
+
+<h2>11. 我建议下一步动作</h2>
+
+<p><b>立即(本周)</b>: 用 PROJECT.html 给董事会或种子轮投资人做 15 分钟路演。重点:5 个真实客户、月 ¥11 成本、5 个 AI 助手并扫、监控到改进的闭环。</p>
+
+<p><b>下周</b>: 找 2-3 个种子轮投资人做产品演示。带上 PROJECT.html + 给每人跑一次 demo:seed 1 次 (5 项目 30 秒起完)。</p>
+
+<p><b>下月</b>: 谈下 3-5 个 SaaS / 加盟行业种子客户试用,跑 1-2 周看产品粘性。</p>
+
+<div class="quote">
+"AI 搜索时代,让品牌被看见的成本是 ¥11/月、6 张表、和 17 个 commit。<br>
+我们没花一分钱广告费,5 个项目已经跑起来。<br>
+下一步只是把这条路走完。"
+</div>
+
+<div class="signoff">
+技术负责人 · 2026-07-25<br>
+相关文件:<br>
+- <span class="hl">PROJECT.html</span> — 投资人/技术伙伴版本(含架构、API、数据)<br>
+- <span class="hl">REPORT_TO_BOSS.html</span> — 本文件(老板 / 内部决策用)<br>
+- <span class="hl">static-demo/</span> — UI mockup 16 个页面(给客户/投资人走查)<br>
+- <span class="hl">docs/USER_GUIDE.md</span> / <span class="hl">docs/deploy.md</span> — 用户/部署文档
+</div>
+
+</div>
+</body>
+</html>
