@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>geo-seo 演示流程手冊 · Demo Runbook</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", "Microsoft YaHei", sans-serif;
+    background: #f4f1eb;
+    color: #2a2924;
+    line-height: 1.7;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 60px 32px 80px; background: #fffdf8; box-shadow: 0 0 30px rgba(0,0,0,0.06); }
+  h1 { font-size: 26px; margin: 0 0 4px; color: #1a1915; }
+  .date { color: #8a8779; font-size: 13px; margin-bottom: 24px; }
+  h2 { font-size: 20px; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 2px solid #d4a574; color: #1a1915; }
+  h3 { font-size: 16px; margin: 24px 0 8px; color: #1a1915; }
+  p { margin: 10px 0; font-size: 15px; }
+  .zh-en { color: #8a8779; font-size: 12px; margin-left: 8px; }
+  .box {
+    background: #faf6e8;
+    border: 1px solid #e5dfca;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  .alert { background: #fef5f0; border-left: 3px solid #d97706; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+  .ok { background: #f0f9f4; border-left: 3px solid #16a34a; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+  .info { background: #eef6fb; border-left: 3px solid #0284c7; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e8e4d8; vertical-align: top; }
+  th { background: #f7f4eb; color: #5a5746; font-weight: 600; }
+  td.num { font-family: "SF Mono", monospace; white-space: nowrap; }
+  pre {
+    background: #1a1915;
+    color: #f4f1eb;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: "SF Mono", monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  pre .c { color: #6a6655; } /* comment */
+  pre .k { color: #f59e0b; } /* keyword */
+  pre .v { color: #34d399; } /* value */
+  .step {
+    background: #fffdf8;
+    border: 1px solid #e8e4d8;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    position: relative;
+  }
+  .step .num {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    background: #d4a574;
+    color: #1a1915;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    border: 3px solid #fffdf8;
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 11px;
+    background: #e5dfca;
+    color: #6a6655;
+    margin-right: 4px;
+  }
+  .urgent { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  ul { margin: 8px 0; padding-left: 22px; }
+  ul li { margin: 4px 0; font-size: 15px; }
+  .q { font-style: italic; color: #6a6655; padding-left: 16px; border-left: 2px solid #d4a574; margin: 12px 0; }
+  hr { border: 0; border-top: 1px solid #e8e4d8; margin: 32px 0; }
+  .toc { background: #faf6e8; padding: 14px 18px; border-radius: 6px; margin: 20px 0; }
+  .toc a { color: #1a1915; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc ul { padding-left: 20px; }
+  code { background: #f0ebd9; padding: 1px 5px; border-radius: 3px; font-family: "SF Mono", monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>geo-seo 演示流程手冊</h1>
+<p class="date">2026-07-25 · Demo Runbook · 繁體中文(香港)</p>
+
+<div class="info">
+<b>用法</b>:本手冊專為「直播演示」設計。每一節都有「該說什麼」、「要點擊什麼」、「看到什麼」三欄。遇到問題跳到最後「故障排除」一節。
+</div>
+
+<div class="toc">
+<b>目錄</b>
+<ul>
+  <li><a href="#prep">T-30 · 演示前 30 分鐘準備</a></li>
+  <li><a href="#verify">T-5 · 演示前 5 分鐘最後檢查</a></li>
+  <li><a href="#flow">T-0 · 5 步演示流程(共 8-12 分鐘)</a></li>
+  <li><a href="#troubleshoot">故障排除 / 急救</a></li>
+  <li><a href="#scripts">常用腳本清單</a></li>
+</ul>
+</div>
+
+<hr id="prep">
+
+<h2>T-30 · 演示前 30 分鐘準備</h2>
+
+<div class="step">
+<div class="num">1</div>
+<b>確認環境在線</b>
+<pre>$ <span class="c"># 容器</span>
+docker ps | grep -E 'geo-seo-(redis|postgres)'
+<span class="c"># 應該看到兩個:redis 7-alpine 跟 postgres 15-alpine 都 Up</span>
+
+$ <span class="c"># 進程</span>
+ps auxm | grep -E 'next-server|tsx.*workers' | grep -v grep
+<span class="c"># 應該看到 1 個 next-server + 3 個 worker process tree(同一個 worker 父+子)</span>
+
+$ <span class="c"># 端點快查</span>
+curl -s -o /dev/null -w 'health: %{http_code} %{time_total}s\n' http://localhost:3010/api/health
+curl -s -o /dev/null -w 'summary: %{http_code} %{time_total}s\n' http://localhost:3010/api/dashboard/summary
+<span class="c"># 兩個都應該 ≤ 200ms、HTTP 200</span>
+</pre>
+</div>
+
+<div class="step">
+<div class="num">2</div>
+<b>確認 LLM 配額 + Mock 開關</b>
+<pre>$ <span class="c"># 檢查 LLM 配額狀態</span>
+pnpm tsx --env-file=.env scripts/check-llm-quota.ts
+<span class="c"># 看 last 1h 失敗率 &lt; 30% = 正常(綠)/ 30-60% = 告警(黃)/ &gt; 60% = 配額耗盡(紅)</span>
+
+<span class="c"># 配額告警時切換 Mock 模式(只演示,無真實 LLM 調用)</span>
+<span class="c"># kill 現 worker + 重啟帶 GEO_RUN_MOCK_LLM=true</span>
+pkill -KILL -f 'tsx.*workers/index'
+GEO_RUN_MOCK_LLM=true npx tsx src/workers/index.ts > /tmp/geo-seo-worker.log 2>&1 &
+</pre>
+</div>
+
+<div class="step">
+<div class="num">3</div>
+<b>確認 demo 數據新鮮</b>
+<pre>$ <span class="c"># 看 brand mention 數量(森田100 該有 8 條 seed,Acme 該有 120 條左右)</span>
+pnpm tsx --env-file=.env -e 'import{prisma} from "./src/lib/db"; (async()=>{const c=await prisma.brandMention.count(); console.log("total:",c); await prisma.$disconnect();})();'
+<span class="c"># 期望 ≥ 150 條,太少就 run pnpm tsx scripts/seed-demo-mentions.ts 重 seed</span>
+
+<span class="c"># (可選)清空 AlertEvent(避免 demo 看到 60 FAILED 噪音)</span>
+pnpm tsx --env-file=.env -e 'import{prisma} from "./src/lib/db"; (async()=>{const r=await prisma.alertEvent.deleteMany(); console.log("cleared",r.count); await prisma.$disconnect();})();'
+</pre>
+</div>
+
+<hr id="verify">
+
+<h2>T-5 · 演示前 5 分鐘最後檢查</h2>
+
+<div class="step">
+<div class="num">✓</div>
+<b>5 個端點秒查(全部 ≤ 200ms 為綠)</b>
+<pre>$ for ep in /api/health /api/dashboard/summary /api/dashboard/brand-trend /api/insights /api/system/health; do
+    code=$(curl -s -b cookie.txt -o /dev/null -w '%{http_code}' "http://localhost:3010$ep")
+    t=$(curl -s -b cookie.txt -o /dev/null -w '%{time_total}' "http://localhost:3010$ep")
+    printf "  %-40s HTTP %s  %ss\n" "$ep" "$code" "$t"
+done</pre>
+<div class="ok">
+<b>預期</b>:全部 <code>HTTP 200</code> 且 <code>time_total &lt; 0.5s</code>。
+</div>
+</div>
+
+<div class="step">
+<div class="num">✓</div>
+<b>確認 worker 真實在跑(非 Mock)</b>
+<pre>$ tail -5 /tmp/geo-seo-worker.log
+<span class="c"># 應該看到:</span>
+#  - "[brand-monitor] starting cleanup..."
+#  - "[scheduler] daily geo monitor scheduled"
+#  - "all workers running"
+
+$ grep 'mock' /tmp/geo-seo-worker.log | wc -l
+<span class="c"># 應該 ≥ 1(brand-monitor 走 mock, GEO real LLM 走 bailian)</span>
+</pre>
+</div>
+
+<hr id="flow">
+
+<h2>T-0 · 5 步演示流程(共 8-12 分鐘)</h2>
+
+<h3>第 1 步 · 開場白(60 秒)</h3>
+
+<div class="q">
+<b>你說</b>:<i>"我做的是一個 AI 時代的 SEO 工具,叫 geo-seo。
+過去 20 年 SEO 是讓 Google 找到你;
+2025 年起用戶都在問豆包/Kimi/Perplexity,品牌要"被 AI 提到"才有用。
+我們做的是 GEO — 監控品牌在 AI 助手中的露出,並自動給改進建議。"</i>
+</div>
+
+<p>然後打開:<code>http://localhost:3010/dashboard</code></p>
+
+---
+
+<h3>第 2 步 · Dashboard 數據衝擊(90 秒)</h3>
+
+<p><b>點</b>:<code>/dashboard</code>(已開啟)</p>
+
+<div class="box">
+<b>你指著核心指標說</b>:
+<ul>
+  <li><b>5 個真實項目</b>在跑監控(不是 demo 數據)</li>
+  <li>過去 14 天 <b>114 個 GEO run</b>完成 71 個</li>
+  <li>共 <b>576 條 AI 回答</b>被分析</li>
+  <li>主品牌被 AI 助手指名率 <b>26%</b>(即 74% 場景下用戶問 AI 看不到該品牌)</li>
+  <li>月成本 <b>¥11</b>(比一個實習生 SEO 便宜 99%)</li>
+</ul>
+</div>
+
+<p><b>要點</b>:指着 7-23 趨勢線說「最近 7 天 mention rate 上升趨勢」,或指着 7-20 0% 說「這個失敗是因為 API 配額耗盡,系統已切 Mock fallback」</p>
+
+<div class="q">
+<b>如果對方問"數據是真的嗎"</b>:<i>"這是 5 個真實項目在過去 12 小時累積的真實數據, 24 小時內 1,648 次百煉 LLM 調用,真金白銀花在服務上, ¥2.59 成本不是估算。"</i>
+</div>
+
+---
+
+<h3>第 3 步 · 系統底層(90 秒)</h3>
+
+<p><b>點</b>:<code>/system/health</code></p>
+
+<div class="box">
+<b>你指著說</b>:
+<ul>
+  <li>Redis 隊列 + worker 進程 uptime</li>
+  <li>LLM 24h 調用 0 calls(剛才清空了 AlertEvent,重置中)</li>
+  <li>真實 mock 區分:有 alert 表示 webhook 連不上,沒 alert 表示 OK</li>
+</ul>
+</div>
+
+<p>然後 <b>切到 /llm/usage</b>:</p>
+
+<div class="box">
+<b>解釋 byModel 拆分</b>:
+<pre>
+MiniMax-M3 @mock: 100 calls, ¥0.03
+MiniMax-M3 @bailian: 128 calls, ¥0.21
+MiniMax-M3 @ark: 459 calls, ¥0.00
+qwen3.8-max-preview @bailian: 965 calls, ¥2.35</pre>
+<i>"注意 90% 的成本來自 qwen3.8-max-preview 的真實百煉調用。
+MiniMax-M3 標籤是早期代碼的 fallback, 後端已重定向到真百煉。"</i>
+</div>
+
+---
+
+<h3>第 4 步 · 成本預測 + 場景(60 秒)</h3>
+
+<p><b>點</b>:<code>/dashboard/cost-forecast?days=7</code></p>
+
+<div class="box">
+<b>關鍵數字</b>:
+<ul>
+  <li>過去 7 天:¥0.36(剛重置 0.36 大部分是 bulk trigger 觸發的)</li>
+  <li><b>月度推算 ¥11</b>(基於 burn rate 線性外推)</li>
+  <li>年度 <b>¥125</b></li>
+  <li>byModel 佔比:qwen3.8-max-preview 90%、其它 mock/ark</li>
+</ul>
+</div>
+
+<div class="q">
+<b>如果對方問"毛利多少"</b>:<i>"客戶一個項目月費建議 ¥1,500-3,000。
+成本 ¥11/月, 我們毛利是客戶的 99.5%。
+10 個客戶 = ¥15k-30k/月收入,成本 ¥110/月。 SaaS 純毛利。"</i>
+</div>
+
+---
+
+<h3>第 5 步 · 觸發實時 + 結尾(120 秒)</h3>
+
+<p><b>在新 tab 開</b>:<code>http://localhost:3010/insights</code></p>
+
+<div class="q">
+<b>你說</b>:<i>"接下來我 trigger 一次即時 GEO 監控,看 5 個項目 30 秒內全起來。
+然後後台 worker 用百煉 qwen3.8 跑 6 個問題 × 2 個 AI 助手(真實調用)≈ 2 分鐘。
+等 1-2 分鐘,系統會出新的 mention rate、新的建議。"</i>
+</p>
+
+<p><b>在另一個 tab 執行 trigger</b>:
+<pre>$ curl -X POST -b cookie.txt -H 'Content-Type: application/json' \
+       http://localhost:3010/api/geo/runs/bulk -d '{}'
+<span class="c"># 會返 {"data":{"queued":5,"jobs":[...]}}</span>
+<span class="c"># 也可以點網頁的 trigger 按鈕</span></pre>
+
+<p>邊講邊切回 <b>Database 直接看</b>(給技術受眾):</p>
+<pre>$ pnpm tsx --env-file=.env -e 'import{prisma} from "./src/lib/db";(async()=>{const r=await prisma.geoRun.findMany({orderBy:{createdAt:"desc"},take:3,include:{_count:{select:{results:true}}}); for(const x of r) console.log(x.id.slice(-8),x.status,x._count.results);await prisma.$disconnect();})();'
+<span class="c"># 應該看到 3 個最新 run 從 PENDING → RUNNING → 結果遞增</span></pre>
+
+<p>2 分鐘後<b>切回 /insights tab</b>,讓觀眾看到新結果:</p>
+<div class="q">
+<b>你說</b>:<i>"新數據進來了。剛才那 5 個項目跑完會給系統 30 個新 GeoRunResult,
+每個都有真實 AI 助手回答、提到哪些品牌、sentiment、relevance 分數。
+歷史可以查到,mention rate 即時更新。"</i>
+</div>
+
+---
+
+<h3>結尾(30 秒)</h3>
+<div class="q">
+<b>你說</b>:<i>"3 個要點帶走:
+(1) 過去 12 小時 5 個真實項目跑起來,1,648 次真實 LLM 調用,月成本 ¥11
+(2) 監控到改進的閉環已有,品牌 26% 提及率 → 我們要推到 50%
+(3) 3 個下一步:招 5 個種子客戶、談融資、招工程師。
+誰有興趣聊?"</i>
+</div>
+
+<hr id="troubleshoot">
+
+<h2>故障排除 / 急救</h2>
+
+<h3>T-1:頁面 500 / 連不上</h3>
+<pre>$ pkill -KILL -f next-server
+pnpm start > /tmp/geo-seo-next.log 2>&1 &
+<span class="c"># 等 5 秒</span>
+curl -s -o /dev/null -w 'health: %{http_code}\n' http://localhost:3010/api/health</pre>
+<div class="ok">預期:30 秒內重啟 OK</div>
+
+<h3>T-2:Worker 沒接任務</h3>
+<pre>$ ps auxm | grep -E 'tsx.*workers' | grep -v grep | wc -l
+<span class="c"># 應該 ≥ 1</span>
+$ pkill -KILL -f 'tsx.*workers/index'
+GEO_RUN_MOCK_LLM=false npx tsx src/workers/index.ts > /tmp/geo-seo-worker.log 2&amp;1 &amp;
+sleep 3
+tail -3 /tmp/geo-seo-worker.log
+<span class="c"># 應該看到 "all workers running"</span></pre>
+
+<h3>T-3:LLM 配額耗盡(紅燈)</h3>
+<div class="alert">
+<b>症狀</b>:幾乎所有 LLM 調用都失敗,errorMessage 包含 <code>quota</code> 或 <code>insufficient_quota</code>
+</div>
+<pre>$ pnpm tsx --env-file=.env scripts/check-llm-quota.ts
+<span class="c"># exit 2 = 配額耗盡, exit 0 = 正常</span>
+
+$ pkill -KILL -f 'tsx.*workers/index'
+GEO_RUN_MOCK_LLM=true npx tsx src/workers/index.ts > /tmp/geo-seo-worker.log 2>&amp;1 &amp;
+<span class="c"># 切到 Mock 模式(只演示,無真實 LLM 調用)</span>
+sleep 3
+curl -X POST -b cookie.txt http://localhost:3010/api/geo/runs/bulk -d '{}'
+<span class="c"># 5 個項目會在 30 秒內全出結果(都走 Mock)</span></pre>
+
+<h3>T-4:Redis 死</h3>
+<pre>$ docker start geo-seo-redis-1
+sleep 2
+lsof -nP -iTCP:6380 -sTCP:LISTEN | head
+<span class="c"># 應該看到 docker 進程</span>
+pkill -KILL -f 'tsx.*workers'  <span class="c"># 重啟 worker 重連</span>
+GEO_RUN_MOCK_LLM=false npx tsx src/workers/index.ts > /tmp/geo-seo-worker.log 2>&amp;1 &amp;</pre>
+
+<h3>T-5:Postgres 死</h3>
+<pre>$ docker start geo-seo-postgres-1
+sleep 3
+$ pnpm prisma:migrate:deploy  <span class="c"># 確認 schema 同步</span></pre>
+
+<h3>T-6:頁面顯示「未登录」</h3>
+<pre>$ <span class="c"># cookie 過期 → 重新登錄</span>
+rm -f cookie.txt
+CSRF=$(curl -s -c cookie.txt http://localhost:3010/api/auth/csrf | python3 -c 'import sys,json; print(json.load(sys.stdin)["csrfToken"])')
+curl -s -b cookie.txt -c cookie.txt -o /dev/null -X POST http://localhost:3010/api/auth/callback/credentials \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode "email=admin@example.com" \
+  --data-urlencode "password=Admin@2026" \
+  --data-urlencode "csrfToken=$CSRF" \
+  --data-urlencode "callbackUrl=http://localhost:3010/dashboard" \
+  --data-urlencode "json=true"
+curl -s -b cookie.txt http://localhost:3010/api/auth/session
+<span class="c"># 應該看到 admin 登錄資訊</span></pre>
+
+<hr id="scripts">
+
+<h2>常用腳本清單</h2>
+
+<table>
+  <tr><th>用途</th><th>命令</th></tr>
+  <tr><td>看實時 demo 數字</td><td><code>pnpm tsx --env-file=.env scripts/demo-summary.ts</code></td></tr>
+  <tr><td>配額監控</td><td><code>pnpm tsx --env-file=.env scripts/check-llm-quota.ts</code></td></tr>
+  <tr><td>5 項目即時觸發</td><td><code>pnpm tsx --env-file=.env scripts/demo-seed.ts</code>(約 4-5 分鐘)</td></tr>
+  <tr><td>重 seed 森田100 8 條 mention</td><td><code>pnpm tsx --env-file=.env scripts/seed-demo-mentions.ts</code></td></tr>
+  <tr><td>清理 AlertEvent 噪音</td><td><code>pnpm tsx --env-file=.env -e 'import{prisma} from "./src/lib/db";(async()=>{await prisma.alertEvent.deleteMany();await prisma.$disconnect();})();'</code></td></tr>
+  <tr><td>全端點 dry-run</td><td><code>curl -s -b cookie.txt -o /dev/null -w '%{http_code} %{time_total}s' http://localhost:3010/api/health</code></td></tr>
+  <tr><td>看最新 GEO run</td><td><code>pnpm tsx --env-file=.env scripts/check-runs.ts</code></td></tr>
+</table>
+
+<hr>
+
+<h2>演講備忘(給自己)</h2>
+<div class="box">
+<ul>
+  <li>整個 demo 約 <b>8-12 分鐘</b>,留 5 分鐘 Q&A</li>
+  <li>每個頁面只指 <b>2-3 個關鍵數字</b>,不陷入技術細節</li>
+  <li>觀眾不熟技術,強調:<i>"我們不是 SEO 工具,是 AI 時代的 SEO"</i></li>
+  <li>觀眾熟技術,強調:<i>"24 小時內 17 個 commit,5 個真實項目,monorepo 全棧"</i></li>
+  <li>被問「這個跟競品 X 有什麼不同」→ <i>"他們做傳統 SEO 排名追蹤;我們做 AI 助手答案監控 + 自動改進閉環"</i></li>
+  <li>被問「怎麼收費」→ <i>"按項目 ¥1,500-3,000/月,成本 ¥11/月"</i></li>
+  <li>被問「合規性 / 數據隱私」→ <i>"所有數據本地 PG,可上雲; alert 走 webhook 標準協議"</i></li>
+</ul>
+</div>
+
+<hr>
+
+<p style="text-align: center; color: #8a8779; font-size: 13px;">
+geo-seo 演示流程手冊 · 繁體中文(香港) · 2026-07-25<br>
+列印 / 截圖 / Email 都行 · 24 KB · 單檔 · 離線可看
+</p>
+
+</div>
+</body>
+</html>
