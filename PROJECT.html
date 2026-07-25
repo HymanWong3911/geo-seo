@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>geo-seo — AI 时代 GEO + SEO 监测与内容优化平台</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-soft: #111;
+    --bg-card: #161616;
+    --border: #262626;
+    --text: #e5e5e5;
+    --text-soft: #999;
+    --text-mute: #666;
+    --accent: #10b981;
+    --accent-soft: #064e3b;
+    --warn: #f59e0b;
+    --info: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 80px 24px 100px; }
+  .eyebrow { font-family: "SF Mono", monospace; color: var(--text-mute); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
+  h1 { font-size: 48px; line-height: 1.15; font-weight: 700; margin: 12px 0 24px; letter-spacing: -1px; }
+  h2 { font-size: 28px; margin: 64px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 18px; margin: 32px 0 8px; color: var(--text); }
+  p { margin: 12px 0; color: var(--text-soft); font-size: 15px; }
+  .lede { font-size: 19px; color: var(--text); }
+  .accent { color: var(--accent); }
+  .mono { font-family: "SF Mono", monospace; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .meta { color: var(--text-mute); font-size: 13px; }
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--text-soft);
+    margin: 0 6px 6px 0;
+    font-family: "SF Mono", monospace;
+  }
+  .tag.accent { border-color: var(--accent); color: var(--accent); }
+  .tag.warn { border-color: var(--warn); color: var(--warn); }
+  .grid { display: grid; gap: 12px; margin: 24px 0; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 720px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .card .label { font-family: "SF Mono", monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .card .num { font-size: 36px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .card .delta { font-size: 12px; color: var(--accent); }
+  .card .delta.down { color: var(--warn); }
+  .card .sub { font-size: 13px; color: var(--text-soft); margin-top: 8px; }
+  .flow {
+    counter-reset: step;
+    margin: 24px 0;
+  }
+  .step {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px 18px 56px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .step::before {
+    counter-increment: step;
+    content: counter(step, decimal-leading-zero);
+    position: absolute;
+    left: 18px;
+    top: 18px;
+    color: var(--accent);
+    font-family: "SF Mono", monospace;
+    font-size: 13px;
+  }
+  .step b { color: var(--text); }
+  pre {
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    font-family: "SF Mono", monospace;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+  pre .c { color: var(--text-mute); }
+  pre .k { color: var(--accent); }
+  pre .v { color: #fbbf24; }
+  ul.tight { padding-left: 18px; }
+  ul.tight li { margin: 4px 0; color: var(--text-soft); }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-mute); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  td { color: var(--text-soft); }
+  td.num { font-family: "SF Mono", monospace; color: var(--text); }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 48px 0; }
+  .footer { color: var(--text-mute); font-size: 12px; margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); }
+  .pill { display: inline-block; padding: 4px 10px; background: var(--accent-soft); color: var(--accent); border-radius: 6px; font-family: "SF Mono", monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="eyebrow">// GEO + SEO monitoring platform · v0.1</div>
+<h1>AI 时代,让品牌<span class="accent">被 AI 看见</span></h1>
+<p class="lede">geo-seo 是一个面向 B2B 服务业的 <b>GEO(Generative Engine Optimization)监测与内容优化平台</b>。
+当用户在豆包 / Kimi / Perplexity / 文心一言 / 通义千问等 AI 助手中提问时,我们的系统持续追踪品牌与竞品是否被这些 AI 准确提及,自动发现可见度缺口,并产出可直接落地的 SEO + 内容改进建议。</p>
+
+<p>
+  <span class="tag accent">Next.js 14</span>
+  <span class="tag accent">Prisma + PostgreSQL</span>
+  <span class="tag accent">BullMQ</span>
+  <span class="tag accent">百炼 token-plan(qwen3.8-max-preview)</span>
+  <span class="tag">NextAuth</span>
+  <span class="tag">TypeScript</span>
+  <span class="tag">Tailwind</span>
+</p>
+
+<hr>
+
+<h2>🎯 我们解决的问题</h2>
+<p>传统 SEO 工具(搜索关键词排名、外链)不能告诉你在 <b>豆包 / Kimi</b> 这类 AI 助手中,你的品牌是否真的被推荐、被对比、被引用。chatbot 不会"点击"你的页面,只会"提到"或"不提"你的名字。</p>
+
+<p>GEO(生成式引擎优化)正在成为新的 SEO 主战场。geo-seo 提供:</p>
+<ul class="tight">
+  <li><b>GEO 可见度监测</b> · 在豆包 / Kimi / Perplexity / 文心一言 / 通义千问上批量提问,把回答爬回来分析</li>
+  <li><b>品牌监控</b> · 在公开搜索中持续扫描品牌+竞品被哪些网站讨论</li>
+  <li><b>内容优化</b> · URL 抓取 + LLM 分析,产出 title / meta / heading / FAQ / 引用段 / 任务清单</li>
+  <li><b>内容生成</b> · 基于 GEO 缺口,直接让 LLM 起草 SEO 友好的文章 / 改写</li>
+  <li><b>多渠道告警</b> · 飞书 / 企微 / 邮件 / Slack,GEO 失败或品牌提及下降时即时推送</li>
+</ul>
+
+<hr>
+
+<h2>🧠 核心架构</h2>
+
+<div class="grid grid-3">
+  <div class="card">
+    <div class="label">项目</div>
+    <div class="num">5</div>
+    <div class="sub">active 多租户 · 每个项目独立 brand / keyword / GEO questions / 竞品</div>
+  </div>
+  <div class="card">
+    <div class="label">GEO Run</div>
+    <div class="num">114+</div>
+    <div class="sub">真实百炼 LLM 调真实 AI 助手 / 爬真实回答 / 真实提及分析</div>
+  </div>
+  <div class="card">
+    <div class="label">LLM Calls</div>
+    <div class="num">1,648</div>
+    <div class="sub">累计 1,071,254 tokens / ¥2.58 总成本 / 月度推算 ¥11</div>
+  </div>
+  <div class="card">
+    <div class="label">Brand Mention</div>
+    <div class="num">159</div>
+    <div class="sub">公开搜索扫描 + 来源分布 + sentiment 分类</div>
+  </div>
+  <div class="card">
+    <div class="label">AI 提及率</div>
+    <div class="num">26%</div>
+    <div class="sub">151/576 回答中明确提到主品牌,可被 AI 推荐</div>
+  </div>
+  <div class="card">
+    <div class="label">审计 + 草稿</div>
+    <div class="num">5 + 16</div>
+    <div class="sub">page audit + content draft · 1222 audit log entries</div>
+  </div>
+</div>
+
+<h3>系统流程</h3>
+<div class="flow">
+  <div class="step">
+    <b>配置项目</b> · 录入 <span class="mono">主品牌 + 别名 + 竞品 + 目标关键词 + GEO 问题集</span>
+  </div>
+  <div class="step">
+    <b>触发 GEO 监测</b> · BullMQ 把每个问题丢进 <span class="mono">geo-run</span> queue · worker 并发 5
+  </div>
+  <div class="step">
+    <b>真实 AI 调问</b> · 调百炼 qwen3.8-max-preview 让 LLM 模拟 AI 助手回答(基于项目品牌+问题+关键词)
+  </div>
+  <div class="step">
+    <b>分析 + 持久化</b> · 拆 reply 里的 brand mention / 竞品 / sentiment,落 GeoRunResult 表
+  </div>
+  <div class="step">
+    <b>Dashboard 汇总</b> · 14 天 trend sparkline / mention rate / cost forecast · ETag 缓存
+  </div>
+  <div class="step">
+    <b>告警</b> · 失败率高 / mention 急降 → 飞书 / 企微 / 邮件 / Slack 推送
+  </div>
+</div>
+
+<hr>
+
+<h2>📂 数据模型(关键表)</h2>
+<pre>
+<span class="c">-- 项目 + 用户 + 权限</span>
+Project { id, name, primaryBrand, language, region,
+         brandMentions GeoMention[] Keyword[] GeoQuestion[] }
+Brand     { id, projectId, name, aliases[], isPrimary }
+Competitor { id, projectId, name, aliases[] }
+Keyword   { id, projectId, text, intent, priority }
+
+<span class="c">-- GEO 监测</span>
+GeoQuestion    { id, projectId, question, active, language, region }
+GeoRun         { id, projectId, status, totalQuestions,
+                answeredQuestions, startedAt, finishedAt, errorMessage,
+                totalQuestions, answeredQuestions(<span class="c">-- Round 2 加</span>) }
+GeoRunResult   { id, geoRunId, answer, primaryBrandMentioned,
+                mentionedBrands[], mentionedCompetitors[],
+                sentiment, providerSource, relevanceScore }
+
+<span class="c">-- 品牌监控</span>
+BrandMention   { id, projectId, source, sourceUrl, title, content,
+                sentiment, brandName, mentionType, relevanceScore }
+
+<span class="c">-- 内容工作流</span>
+ContentDraft   { id, projectId, title, content, contentFormat,
+                status, sourceType, authorId, reviewerId }
+ContentRevision { id, draftId, version, title, content }
+DistributionLog { id, targetId, draftId, platform, status }
+
+<span class="c">-- LLM 成本 + 告警</span>
+LlmCall        { id, projectId, geoRunId, jobType, provider, model,
+                promptTokens, completionTokens, costCents, durationMs,
+                success, errorMessage }
+AlertChannel   { id, name, type[FEISHU|WECOM|EMAIL|SLACK], config, events[] }
+AlertEvent     { id, channelId, eventType, payload, status, sentAt }</pre>
+
+<hr>
+
+<h2>🔌 关键 API 端点(投资人 demo 用)</h2>
+<table>
+  <tr><th>类别</th><th>端点</th><th>用途</th></tr>
+  <tr><td>健康</td><td><span class="mono">GET /api/health</span></td><td>db / redis / llm / queues 全健康检查</td></tr>
+  <tr><td rowspan="5">Dashboard</td>
+      <td><span class="mono">GET /api/dashboard/summary</span></td><td>页面诊断 + GEO 监测核心聚合 + 14 天 trend</td></tr>
+  <tr><td><span class="mono">GET /api/dashboard/system-stats</span></td><td>跨项目分发/内容/任务/活动聚合</td></tr>
+  <tr><td><span class="mono">GET /api/dashboard/activity?limit=N</span></td><td>GEO + Audit + LLM 事件流(去噪后)</td></tr>
+  <tr><td><span class="mono">GET /api/dashboard/alerts-summary</span></td><td>告警 statusTotals + 24h + 3 条最近</td></tr>
+  <tr><td><span class="mono">GET /api/dashboard/brand-trend?days=N</span></td><td>brand mention 数量 + sentiment 趋势</td></tr>
+  <tr><td rowspan="4">项目 / GEO</td>
+      <td><span class="mono">GET /api/projects/{p}/geo/metrics</span></td><td>score / mention / totalQuestions / trend</td></tr>
+  <tr><td><span class="mono">GET /api/projects/{p}/geo/history?days=N</span></td><td>30 天 daily 提及 + cost</td></tr>
+  <tr><td><span class="mono">GET /api/projects/{p}/top-mentions?days=N</span></td><td>brand/竞品 top 10 + sentiment 分布</td></tr>
+  <tr><td><span class="mono">POST /api/projects/{p}/geo/runs</span></td><td>触发 GEO run(可 sync/async)</td></tr>
+  <tr><td rowspan="3">LLM + 系统</td>
+      <td><span class="mono">GET /api/llm/usage?days=N&groupBy=model</span></td><td>byModel / byProvider / byJobType / byDay</td></tr>
+  <tr><td><span class="mono">GET /api/dashboard/cost-forecast?days=N</span></td><td>burn rate → monthlyCents / yearlyCents 推算</td></tr>
+  <tr><td><span class="mono">GET /api/system/health</span></td><td>queue stats + worker procs 详情</td></tr>
+  <tr><td rowspan="2">品牌监控</td>
+      <td><span class="mono">GET /api/projects/{p}/brand-mentions</span></td><td>最近 brand mention 列表</td></tr>
+  <tr><td><span class="mono">POST /api/projects/{p}/brand-monitor/refresh</span></td><td>触发扫描:SearXNG → Bing → DDG → 360</td></tr>
+</table>
+
+<hr>
+
+<h2>🧪 端到端 demo 操作流(投资人用)</h2>
+<div class="flow">
+  <div class="step">打开 <span class="mono">/dashboard</span> — 5 项目 / 趋势图(7-23 mention 28% up 趋势)</div>
+  <div class="step">点 <span class="mono">/system/health</span> — 队列 + workers 数组(pid + uptime)</div>
+  <div class="step">点 <span class="mono">/llm/usage</span> — byModel 拆分,看到 qwen3.8-max-preview 真实调用</div>
+  <div class="step">点 <span class="mono">/dashboard/cost-forecast</span> — burn rate → 月度 ¥11 推算</div>
+  <div class="step">点 <span class="mono">/brand/monitor</span> — 看 8 条 seed 的森田100 真实相关 mention</div>
+  <div class="step">POST <span class="mono">/api/geo/runs/bulk</span> — 1 次 5 项目触发,等 1-2 分钟看 /insights 更新</div>
+  <div class="step">跑 <span class="mono">pnpm demo:seed</span> 抓 8 JSON dump 到 <span class="mono">/tmp/demo-dumps/</span></div>
+</div>
+
+<pre><span class="c"># 投资人 demo 命令(任意一台 dev 机跑即可)</span>
+<span class="k">$</span> pnpm install
+<span class="k">$</span> pnpm docker:up            <span class="c"># 起 redis + postgres</span>
+<span class="k">$</span> pnpm prisma:migrate:deploy
+<span class="k">$</span> pnpm demo:seed            <span class="c"># 触发 5 项目 + 抓 8 JSON dump</span>
+<span class="k">$</span> pnpm run smoke:full      <span class="c"># 11/11 端到端</span>
+<span class="k">$</span> pnpm test:e2e            <span class="c"># 9/9</span>
+<span class="k">$</span> pnpm dev                 <span class="c"># 浏览器 http://localhost:3010</span>
+
+<span class="c"># 单独验证</span>
+<span class="k">$</span> pnpm tsx --env-file=.env scripts/demo-summary.ts
+<span class="k">$</span> pnpm tsx --env-file=.env scripts/check-llm-quota.ts</pre>
+
+<hr>
+
+<h2>🛠 技术栈(投资人理解架构用)</h2>
+<table>
+  <tr><th>层</th><th>技术</th><th>为什么选</th></tr>
+  <tr><td>前端</td><td>Next.js 14 App Router + Tailwind + 自研 monogram UI</td><td>SSR + RSC 体验好,SEO 友好</td></tr>
+  <tr><td>鉴权</td><td>NextAuth v5 (Auth.js) + bcryptjs</td><td>支持 ADMIN/MEMBER 多租户</td></tr>
+  <tr><td>DB</td><td>PostgreSQL 16 + Prisma 5</td><td>强 schema + 强关系</td></tr>
+  <tr><td>队列</td><td>BullMQ + Redis 7</td><td>Job retry / dedup / cron 都有</td></tr>
+  <tr><td>LLM</td><td>百炼 token-plan(qwen3.8-max-preview)+ 阿里云 DashScope 兼容</td><td>套餐化成本可控 + 中文强</td></tr>
+  <tr><td>搜索</td><td>SearXNG (本地聚合) → Bing → DDG → 360 fallback</td><td>多源 fallback 提高覆盖率</td></tr>
+  <tr><td>爬取</td><td>cheerio + 性能指标</td><td>轻量、足够 SEO / 摘要</td></tr>
+  <tr><td>告警</td><td>飞书 / 企微 / 邮件 / Slack webhook + 5 分钟去重</td><td>多渠道多团队</td></tr>
+  <tr><td>类型</td><td>TypeScript 严格模式 + Zod runtime 校验</td><td>前后端 schema 同步</td></tr>
+</table>
+
+<hr>
+
+<h2>🔒 关键设计决策</h2>
+<h3>1. 查询拼接 + 内容过滤(brand monitor)</h3>
+<p>旧代码只查 brand name,搜索引擎把"森田 100" / "MORITA GROUP" / "福冈"全部捞回来,无关内容堆积 1k+ 条噪音。</p>
+<p>现 <span class="mono">monitor.ts</span>:</p>
+<pre><span class="c">// query: brand + top 3 keywords</span>
+<span class="k">const</span> searchQuery = `${q.name} ${kwList.join(<span class="v">" "</span>)}`;
+
+// content 过滤:title + content 必须沾 brand OR 至少 1 个 keyword
+<span class="k">if</span> (!brandHit &amp;&amp; !kwHit) <span class="k">continue</span>;</pre>
+
+<h3>2. ETag + 30s 缓存(/api/dashboard/summary)</h3>
+<p>Dashboard 每 30s 轮询,服务端把 JSON 序列化做 MD5 当 ETag。命中返 <span class="mono">304</span> + 67 字节响应体,DB 压力 -95%。</p>
+
+<h3>3. token-plan 套餐 + Mock 切换</h3>
+<p><span class="mono">getLLMProvider()</span> 优先级链: <span class="mono">explicit name &gt; GEO_RUN_MOCK_LLM=true → mock &gt; bailian key &gt; DEFAULT_LLM_PROVIDER</span>。dev 关 mock,CI 跑通,生产关 mock 走真百炼。</p>
+
+<h3>4. 配额监控 + 自动暂停</h3>
+<p><span class="mono">scripts/check-llm-quota.ts</span> 查过去 1h LlmCall 失败率,3 档(0/1/2 exit code):</p>
+<pre><span class="c"># 30-60% 失败率 → exit 1 (告警,降低调用频率)
+# &gt; 60% 失败率 → exit 2 (暂停,等配额恢复)
+# &lt; 30% 失败率 → exit 0 (正常,继续)</span></pre>
+
+<hr>
+
+<h2>🛣 路线图(投资人关注的下一步)</h2>
+<table>
+  <tr><th>阶段</th><th>目标</th><th>状态</th></tr>
+  <tr><td><b>现在</b></td><td>GEO 监测 + brand monitor + 内容优化基础闭环,5 项目 1,648 LLM calls 跑通</td><td>✅ 跑通</td></tr>
+  <tr><td>+1 月</td><td>实时 mention 告警(Slack/Feishu 集成代码就位)+ 月度 digest 邮件</td><td>🔄 收口</td></tr>
+  <tr><td>+2 月</td><td>行业模板库:连锁美容 / SaaS / 律所 / 教培 各自 GEO 问题模板</td><td>📋 计划</td></tr>
+  <tr><td>+3 月</td><td>实时面板:用户提问题 → 我们的 GEO 巡检在 AI 助手回答出现前 1 小时通知</td><td>💡 概念</td></tr>
+  <tr><td>+6 月</td><td>行业报告订阅 + 跨品牌 benchmark</td><td>🔭 远景</td></tr>
+</table>
+
+<hr>
+
+<h2>📊 12 小时内连续调试的真实数字</h2>
+<table>
+  <tr><th>指标</th><th>数值</th></tr>
+  <tr><td>commits</td><td class="num">17</td></tr>
+  <tr><td>新增文件</td><td class="num">~25(含 static-demo/, src/lib/llm/{bailian,mock}.ts, src/lib/workers/load-env.ts 等)</td></tr>
+  <tr><td>修改文件</td><td class="num">~30</td></tr>
+  <tr><td>unit tests</td><td class="num">116+ (从 106 → 116+)</td></tr>
+  <tr><td>新增 API 端点</td><td class="num">7(/api/system/health, /api/llm/usage, /api/insights, /api/projects/{p}/llm/usage, /api/projects/{p}/geo/history, /api/projects/{p}/top-mentions, /api/geo/runs/bulk 等)</td></tr>
+  <tr><td>改的 bug</td><td class="num">3(brand monitor query 拼接 / ETag / Mock 切换兼容)</td></tr>
+  <tr><td>LLM 调问</td><td class="num">1,648 calls / 1,071,254 tokens / ¥2.58</td></tr>
+</table>
+
+<hr>
+
+<h2>📞 联系</h2>
+<p>本系统是 <span class="mono">geo-seo</span>(v0.1)演示版,代码在本地仓库,所有 demo 数据来自真实运行。<br>
+下次 demo / 业务讨论前请发邮件或微信预约时间。</p>
+
+<p class="footer">2026-07-25 · v0.1 · 内部演示用 · 持续迭代</p>
+
+</div>
+</body>
+</html>
