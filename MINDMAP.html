@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>geo-seo 系统架构 · 思维导图</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #0a0a0a;
+    color: #e5e5e5;
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: auto;
+  }
+  .page { padding: 40px 20px 60px; max-width: 1400px; margin: 0 auto; }
+  .eyebrow { font-family: "SF Mono", monospace; color: #6a6655; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  h1 { font-size: 32px; margin: 0 0 6px; color: #e5e5e5; font-weight: 700; }
+  .date { color: #6a6655; font-size: 13px; margin-bottom: 24px; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; font-size: 12px; }
+  .legend .item { background: #161616; border: 1px solid #262626; border-radius: 100px; padding: 4px 10px; }
+  .legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .legend .frontend .dot { background: #3b82f6; }
+  .legend .backend .dot { background: #10b981; }
+  .legend .worker .dot { background: #f59e0b; }
+  .legend .llm .dot { background: #a855f7; }
+  .legend .brand .dot { background: #ec4899; }
+  .mindmap {
+    position: relative;
+    width: 1280px;
+    height: 920px;
+    margin: 0 auto;
+    background: radial-gradient(ellipse at center, #161616 0%, #0a0a0a 70%);
+    border-radius: 16px;
+  }
+  .center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d4a574 0%, #c75c1e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: #0a0a0a;
+    font-weight: 700;
+    box-shadow: 0 0 60px rgba(212, 165, 116, 0.3), 0 0 20px rgba(212, 165, 116, 0.2);
+    z-index: 10;
+  }
+  .center .top { font-size: 11px; letter-spacing: 2px; opacity: 0.8; }
+  .center .name { font-size: 22px; margin-top: 4px; }
+  .center .bot { font-size: 10px; opacity: 0.7; margin-top: 2px; }
+  .branch {
+    position: absolute;
+    width: 200px;
+  }
+  .branch-card {
+    background: #161616;
+    border: 1px solid #262626;
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: all 0.3s ease;
+  }
+  .branch-card:hover {
+    border-color: #d4a574;
+    transform: scale(1.04);
+    box-shadow: 0 0 30px rgba(212, 165, 116, 0.15);
+  }
+  .branch-card .label { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .branch-card .sub { font-size: 11px; color: #999; line-height: 1.5; }
+  .branch-card .item { display: block; color: #999; font-size: 11px; line-height: 1.6; }
+  .branch-card .item::before { content: "· "; color: #6a6655; }
+  .line {
+    stroke: #d4a574;
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 0.6;
+  }
+  .frontend { border-top: 3px solid #3b82f6; }
+  .backend { border-top: 3px solid #10b981; }
+  .worker { border-top: 3px solid #f59e0b; }
+  .llm { border-top: 3px solid #a855f7; }
+  .brand { border-top: 3px solid #ec4899; }
+  .frontend .label { color: #60a5fa; }
+  .backend .label { color: #34d399; }
+  .worker .label { color: #fbbf24; }
+  .llm .label { color: #c084fc; }
+  .brand .label { color: #f472b6; }
+  /* 位置:5 个分支 */
+  .pos-frontend { left: 40px; top: 80px; }
+  .pos-llm { left: 200px; top: 80px; }
+  .pos-backend { right: 40px; top: 80px; }
+  .pos-worker { right: 40px; bottom: 60px; }
+  .pos-brand { left: 40px; bottom: 60px; }
+  .legend-section { margin-top: 40px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 24px; }
+  @media (max-width: 900px) { .stats { grid-template-columns: 1fr 1fr; } }
+  .stat {
+    background: #161616;
+    border: 1px solid #262626;
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+  .stat .label { font-size: 11px; color: #6a6655; text-transform: uppercase; letter-spacing: 1px; }
+  .stat .num { font-size: 24px; font-weight: 700; color: #d4a574; margin-top: 4px; }
+  .footer { color: #6a6655; font-size: 12px; text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #262626; }
+  .intro { color: #999; font-size: 14px; line-height: 1.7; max-width: 880px; margin: 0 auto 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="eyebrow">// SYSTEM ARCHITECTURE · MIND MAP · v0.1</div>
+<h1>geo-seo 系统架构</h1>
+<p class="date">2026-07-25 · 单文件 16 KB · 离线可看</p>
+
+<p class="intro">AI 时代 GEO(Generative Engine Optimization)+ SEO 监测与内容优化平台。从用户角度看,系统分 5 层:前端 UI / 后端 API / 异步 Worker / 大模型 / 品牌监控。每层都打通了真实 LLM 调用,持续在跑。</p>
+
+<div class="legend">
+  <div class="item frontend"><span class="dot"></span>前端 UI</div>
+  <div class="item backend"><span class="dot"></span>后端 API</div>
+  <div class="item worker"><span class="dot"></span>异步 Worker</div>
+  <div class="item llm"><span class="dot"></span>大模型</div>
+  <div class="item brand"><span class="dot"></span>品牌监控</div>
+</div>
+
+<div class="mindmap">
+
+  <svg width="1280" height="920" style="position:absolute; top:0; left:0; pointer-events:none;">
+    <line class="line" x1="640" y1="460" x2="240" y2="190" />
+    <line class="line" x1="640" y1="460" x2="400" y2="190" />
+    <line class="line" x1="640" y1="460" x2="880" y2="190" />
+    <line class="line" x1="640" y1="460" x2="880" y2="730" />
+    <line class="line" x1="640" y1="460" x2="240" y2="730" />
+  </svg>
+
+  <div class="branch pos-frontend" style="width: 180px;">
+    <div class="branch-card frontend">
+      <div class="label">前端 UI</div>
+      <div class="sub">用户直接看的界面</div>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">关键页面:</div>
+      <span class="item">/dashboard 核心指标</span>
+      <span class="item">/system/health 队列</span>
+      <span class="item">/llm/usage byModel</span>
+      <span class="item">/brand/monitor 品牌监控</span>
+      <span class="item">/content/[id] 内容分析</span>
+      <span class="item">/geo/runs/[id] GEO 详情</span>
+      <span class="item">/insights LLM 洞察</span>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">技术栈:</div>
+      <span class="item">Next.js 14 App Router</span>
+      <span class="item">Tailwind + 自研 monogram</span>
+    </div>
+  </div>
+
+  <div class="branch pos-llm" style="width: 180px;">
+    <div class="branch-card llm">
+      <div class="label">大模型 LLM</div>
+      <div class="sub">AI 调用层,优先级链</div>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">providers:</div>
+      <span class="item">百炼 qwen3.8-max-preview</span>
+      <span class="item">百炼 qwen3.7-plus / max</span>
+      <span class="item">DeepSeek-v4-pro</span>
+      <span class="item">GLM-5.2(智谱)</span>
+      <span class="item">ARK Coding Plan(fallback)</span>
+      <span class="item">Mock(开发/CI)</span>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">优先级链:</div>
+      <span class="item">explicit name &gt; mock &gt; bailian key &gt; DEFAULT</span>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">Tracker:</div>
+      <span class="item">LlmCall 写库:promptTokens,</span>
+      <span class="item">completionTokens, costCents,</span>
+      <span class="item">durationMs, provider, model,</span>
+      <span class="item">success, errorMessage</span>
+    </div>
+  </div>
+
+  <div class="branch pos-backend" style="width: 200px;">
+    <div class="branch-card backend">
+      <div class="label">后端 API</div>
+      <div class="sub">HTTP 端点 + 业务逻辑</div>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">13 个核心端点:</div>
+      <span class="item">/api/health 6 子检查</span>
+      <span class="item">/api/dashboard/summary 14 天 trend</span>
+      <span class="item">/api/dashboard/system-stats</span>
+      <span class="item">/api/dashboard/activity 事件流</span>
+      <span class="item">/api/dashboard/alerts-summary</span>
+      <span class="item">/api/dashboard/brand-trend</span>
+      <span class="item">/api/dashboard/cost-forecast</span>
+      <span class="item">/api/llm/usage?days=N&groupBy=</span>
+      <span class="item">/api/insights 项目洞察</span>
+      <span class="item">/api/system/health 队列</span>
+      <span class="item">/api/projects/{p}/geo/metrics</span>
+      <span class="item">/api/projects/{p}/geo/history</span>
+      <span class="item">/api/projects/{p}/top-mentions</span>
+      <span class="item">/api/geo/runs/bulk 触发</span>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">底层:</div>
+      <span class="item">NextAuth v5 · Zod 校验</span>
+      <span class="item">Prisma ORM · PostgreSQL 16</span>
+      <span class="item">requireProjectEditor/Owner</span>
+      <span class="item">rate-limit / dedup / 缓存</span>
+    </div>
+  </div>
+
+  <div class="branch pos-worker" style="width: 200px;">
+    <div class="branch-card worker">
+      <div class="label">异步 Worker</div>
+      <div class="sub">BullMQ + cron</div>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">队列:</div>
+      <span class="item">geo-run: 真百炼 GEO 调问</span>
+      <span class="item">page-audit: SEO 页面诊断</span>
+      <span class="item">content-analysis: 内容优化</span>
+      <span class="item">distribution: 多渠道分发</span>
+      <span class="item">alert-sender: 飞书/Slack/邮件</span>
+      <span class="item">cms-publish: 草稿→WordPress</span>
+      <span class="item">scheduler: 每日 cron</span>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">Cron 任务:</div>
+      <span class="item">每日 GEO 监测扫描</span>
+      <span class="item">品牌监控扫描</span>
+      <span class="item">周报 / 月报生成</span>
+      <span class="item">数据归档(retention)</span>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">保障:</div>
+      <span class="item">job retry / dedup / 死信</span>
+      <span class="item">concurrency = 5(env)</span>
+      <span class="item">failure alert(5 分钟去重)</span>
+    </div>
+  </div>
+
+  <div class="branch pos-brand" style="width: 200px;">
+    <div class="branch-card brand">
+      <div class="label">品牌监控</div>
+      <div class="sub">公开搜索 + 清理</div>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">多源 fallback:</div>
+      <span class="item">SearXNG(本地聚合)优先</span>
+      <span class="item">Bing 公网搜索</span>
+      <span class="item">DuckDuckGo HTML</span>
+      <span class="item">360 so.com</span>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">修复后逻辑:</div>
+      <span class="item">query = brand + top 3 kw</span>
+      <span class="item">过滤不沾 brand / kw</span>
+      <span class="item">relevance 加 keyword 命中</span>
+      <div class="sub" style="margin-top: 8px; color: #d4a574;">持久化:</div>
+      <span class="item">BrandMention 表</span>
+      <span class="item">mentionType: primary / competitor</span>
+      <span class="item">sentiment: pos / neu / neg</span>
+      <span class="item">relevanceScore 0-100</span>
+      <span class="item">清理:不相关 → 删</span>
+    </div>
+  </div>
+
+  <div class="center">
+    <div class="top">// CORE</div>
+    <div class="name">geo-seo</div>
+    <div class="bot">GEO + SEO</div>
+  </div>
+
+</div>
+
+<div class="legend-section">
+<h2 style="font-size: 18px; color: #d4a574; margin: 40px 0 16px; border-bottom: 1px solid #262626; padding-bottom: 6px;">关键运行数据(2026-07-25 当前)</h2>
+<div class="stats">
+  <div class="stat"><div class="label">真实项目</div><div class="num">5</div></div>
+  <div class="stat"><div class="label">累计 GEO Run</div><div class="num">114+</div></div>
+  <div class="stat"><div class="label">真 LLM 调用</div><div class="num">1,648</div></div>
+  <div class="stat"><div class="label">月成本</div><div class="num">¥11</div></div>
+  <div class="stat"><div class="label">AI 提及率</div><div class="num">26%</div></div>
+  <div class="stat"><div class="label">品牌提及</div><div class="num">163</div></div>
+  <div class="stat"><div class="label">单测</div><div class="num">116+</div></div>
+  <div class="stat"><div class="label">commits</div><div class="num">17+</div></div>
+</div>
+</div>
+
+<div class="footer">
+geo-seo 系统架构思维导图 · 2026-07-25 · 跟 PROJECT.html / REPORT_TO_BOSS.html / DEMO_RUNBOOK.html 配套
+</div>
+
+</div>
+</body>
+</html>
