@@ -4,6 +4,7 @@
 > Owner: GEO-SEO（iMac custody coordinator）
 > Contract: geo-seo.worker-runtime-profile.v1
 > Date: 2026-09-04 (Asia/Hong_Kong)
+> Revision: v1.1 addendum — closes the HF-P2 receipt-loader and test-lease gaps; runtime contract id remains v1
 
 本文件是 GEO-SEO 产品内的 Harness-first 合同草案，定义 effect capability、worker runtime profile、装载/调用门禁、队列隔离和证据接口。它不是实现、生产配置、发布批准或 CASTR 业务合同。实现前必须独立 reviewer 复核，并由独立 task 按本文档 lease 实施。
 
@@ -263,6 +264,75 @@ type WorkerRuntimeProfileV1 = {
 
 resolver 必须早于任何 env file 读取、Prisma import、Redis/BullMQ import、provider SDK import、browser import 或 worker factory import。旧 load-env.ts 不满足此顺序。
 
+### 5.4 HF-P2 bootstrap construction boundary
+
+HF-P2 只交付可验证的 bootstrap/mount boundary，不交付真实 worker invocation。它必须保持以下三层输入分离：
+
+1. `WORKER_RUNTIME_PROFILE` 只选择编译进 `mount-registry.ts` 的 immutable profile bundle；不得从 env、JSON 字符串或任意文件构造 profile。
+2. `OFFLINE_RESOURCE_RECEIPT_REF` 只接受已经过 P1 validator 的 `ResourceReceiptRefV1` 形状；它是非敏感身份，不是文件路径或连接信息。
+3. receipt bytes 只能通过注入的 `TaskResourceReceiptFileReaderV1` port 取得；未来 HF-PR adapter 必须使用 opaque task-root directory handle 与固定文件名 `receipt.json`，不得从 env、profile、job payload 或任意绝对路径选择文件。缺任一输入、身份不一致或 reader/verifier 不可信都以 exit 78 fail closed，不得默认 legacy、共享 DB/Redis 或 localhost。
+
+receipt envelope 的 exact schema 为：
+
+~~~ts
+// Runtime syntax: /^receipt:[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.
+// The brand is produced only by the P1 validator; raw strings are untrusted.
+type ResourceReceiptRefV1 = string & { readonly __brand: 'ResourceReceiptRefV1' };
+
+type TaskResourceReceiptV1 = {
+  scopeId: string; // /^[a-z][a-z0-9-]*$/
+  infrastructureBindings: InfrastructureBindingV1[];
+  queueBindings: QueueBindingV1[];
+};
+
+type SignedTaskResourceReceiptEnvelopeV1 = {
+  schemaVersion: 'geo-seo.task-resource-receipt.v1';
+  issuerId: string;        // /^[a-z][a-z0-9-]*$/
+  keyId: string;           // /^[a-z][a-z0-9-]*$/
+  issuedAt: string;        // RFC 3339 UTC
+  expiresAt: string;       // RFC 3339 UTC; maximum TTL 15 minutes
+  nonce: string;           // cryptographically random, single-use safe identifier
+  audience: string;        // exact approved candidate/image identity
+  purpose: 'validate-only' | 'network-none-contract' | 'internal-e2e';
+  receiptRef: ResourceReceiptRefV1;
+  receipt: TaskResourceReceiptV1;
+  payloadDigest: `sha256:${string}`;
+  signature: `ed25519:${string}`;
+};
+
+type TrustedTaskRootHandleV1 = unknown & {
+  readonly __brand: 'TrustedTaskRootHandleV1';
+};
+
+interface TaskResourceReceiptFileReaderV1 {
+  load(receiptRef: ResourceReceiptRefV1,
+       taskRoot: TrustedTaskRootHandleV1,
+       fileName: 'receipt.json'): Promise<unknown>;
+}
+
+interface TaskResourceReceiptVerifierPortV1 {
+  verify(envelope: unknown): Promise<
+    | { ok: true; receipt: VerifiedTaskResourceReceiptV1 }
+    | { ok: false; reasonCode: 'RECEIPT_INVALID' | 'RECEIPT_EXPIRED'
+        | 'RECEIPT_ISSUER_UNTRUSTED' | 'RECEIPT_SIGNATURE_INVALID' }
+  >;
+}
+~~~
+
+上面的 `InfrastructureBindingV1` 与 `QueueBindingV1` 是 §5.1 的 exact shapes；它们、`TaskResourceReceiptV1` 和 signed envelope 顶层都拒绝未知字段。每个 `infrastructureBindings[].resourceReceiptRef` 必须通过同一个 `ResourceReceiptRefV1` validator、在集合内唯一并受签名 payload 覆盖；每个 `queueBindings[].scopeId` 必须与 `receipt.scopeId` 完全一致，queue prefix 也必须满足对应 profile/scope 合同。`resolveRuntimeProfileV1()` 仍对完整 infrastructure/queue exact set、scope 和 precedence 做最终验证。
+
+file reader 只负责安全载入，绝不自行授予 authority。它必须从可信 launch adapter 提供且已经打开的 task-root directory handle 内解析固定单一文件名，不能把 env 路径当作 trust root；用 `openat(..., O_RDONLY|O_NOFOLLOW)` 或语义等价的 descriptor-confined primitive 打开，并在同一 file descriptor 上 `fstat`、限长读取最多 `65,536` raw bytes、再次 `fstat`，要求 regular/current-uid/`0600` 且 device/inode/size/mtime 不变。task root handle 只能由 HF-PR adapter 对固定 container mount `/run/geo-offline`（或测试注入目录）执行 no-follow directory open 后产生，root 必须 current-uid、`0700`、非 symlink；平台无法提供等价原语时 fail closed。`OFFLINE_RESOURCE_RECEIPT_FILE`/目录路径变量不属于配置合同，存在即拒绝。原始路径、文件内容、地址和端口都不输出。
+
+authority 只来自 `TaskResourceReceiptVerifierPortV1`。它使用 coordinator-approved、out-of-band immutable trust anchor 按 `issuerId + keyId` 查 Ed25519 public key；trust anchor 绝不从 envelope、receipt、env 或同一目录读取。先按 RFC 8785 对除 `payloadDigest`/`signature` 外的 exact fields 做 canonicalization，验证 SHA-256 digest，再验证 signature；同时验证 issued/expiry、最多 15 分钟 TTL、最多 60 秒 clock skew、exact audience/purpose 和 replay cache。replay port 必须在 verifier 返回成功前对 `issuerId + keyId + nonce` 做原子 consume-once；下游失败也不得释放或复用，进程崩溃后保持 consumed 直到 expiry。每个 process/stage 必须得到不同的 signed receipt ref 与 nonce；replay store 状态未知、不可达或原子性无法证明时一律 fail closed。任何 unknown issuer/key、过期、重放、audience/purpose 不匹配、schema/digest/signature/字段错误都拒绝。只有 verifier 产生的 opaque `VerifiedTaskResourceReceiptV1` 才能进入 `resolveRuntimeProfileV1()`；同 uid 自写 `0700/0600` 文件、regex/brand 或 ref 字符串相等都不构成权威证明。
+
+HF-P2 只定义并注入 file-reader/verifier ports，不实现 descriptor-confined reader，也不包含真实 trust anchor、issuer 或 signing key。测试可以注入 memory file reader 和 deterministic fake verifier，以证明 gate 顺序；但默认 standalone CLI 缺任一真实 adapter 时必须以 exit 78 `RESOURCE_RECEIPT_READER_UNAVAILABLE` 或 `RESOURCE_RECEIPT_VERIFIER_UNAVAILABLE` 失败，不能把测试 adapter 当 production fallback。真实 reader、issuer/verifier adapter、trust-anchor lifecycle、rotation/revocation 和 replay store 必须另立 `HF-PR-resource-custody` 合同/lease；其 PASS 是 HF-P3 真实 worker/network 运行的前置门。所有 filesystem、JSON、canonicalization、crypto 和 verifier 异常都归一化为稳定 reason code，不输出 raw error、stack、path、envelope 或 payload。
+
+`mount-registry.ts` 只包含冻结的 opaque component/capability/factory-id registry 和一个可注入的 importer boundary；它不包含 module specifier，也不导入或传递到业务模块。HF-P2 的记录型 fake importer 只能证明 deny/invalid 输入调用次数为 0、全部 gate 通过后 boundary 才恰好被调用，不能证明真实 module map 封闭。真实 factory-id→static module specifier map 由 HF-P3 的新 `src/workers/offline-import-map.ts` 独占，并由新 `tests/contracts/offline-import-closure.v1.test.ts` 证明每个 specifier 是静态 allowlist、无 profile/receipt/env/payload 拼接且递归 import graph 合规。
+
+HF-P2 的默认 CLI 不构造 importer。其唯一模式 authority 是命令行 flag，且只接受恰好一个 `--validate-only`：它在所有 resolver、static-manifest、receipt 和 queue gate 通过后才可能返回成功，但 verifier port 缺失时仍必须 fail closed。`OFFLINE_VALIDATE_ONLY`、`OFFLINE_RESOURCE_RECEIPT_FILE` 和任意 receipt-directory env 都不属于配置合同，存在该变量、缺失/重复 flag 或任何未知参数都以 exit 78 拒绝，不能形成第二套 precedence 或路径 authority。任何真实 mount/invoke 模式在 HF-P3 前同样以 exit 78 和稳定 reason code 拒绝。这不是实际业务 worker、provider 或网络执行证据。
+
+HF-P2 两个源码及两个测试的静态 import graph 只允许 P1 harness 模块、相对的 P2 模块、Vitest/TypeScript 类型以及 CLI 参数解析所需的无副作用 Node 标准库；不得 import `node:fs`/crypto/network 或实现 HF-PR adapter。禁止直接或传递到 `src/workers/index.ts`、`load-env.ts`、任何业务 worker、Prisma、Redis/BullMQ、search/LLM provider、alert/mailer、crawler/browser、scheduler、brand monitor、publisher 或任意外联库。P2 通过不改变旧 `pnpm worker`、`Dockerfile.worker` 或 production entrypoint；它只证明新入口边界可继续进入 HF-PR/HF-P3。
+
 ## 6. Exact profile semantics
 
 capabilityPolicies 的完整基线如下；表外、未知或缺失 capability 均为 deny。allowlisted 仍受 SafetyFloor、可信授权、resource receipt 和 invoke gate 约束，不代表用户权限。
@@ -462,12 +532,13 @@ live logs 只允许 run/stage、profile id、component、reason code、duration�
 
 1. Contract：评审本文件和 SafetyFloor，不改 runtime。
 2. Profile parser：实现 schema、precedence、reference shape 和 exit 78，不 import worker、不执行 invocation。
-3. Bootstrap/mount：实现 static manifest、dynamic mount、QueueBinding 和 deny evidence；只允许 geo-run 目标组件。
-4. Offline geo slice：注入 synthetic SearchPort/LLM、receipt-bound ProductStatePort 和 deny NotificationPort，移除真实 provider/alert/DB/queue singleton 的全局静态 import，完成 network-none、queue isolation 和 worker certificate 的 web-sync exclusion；EvidenceSink 未验收前不宣称真实 invocation compliant。
-5. Evidence sink：完成 append order、crash、permission、contract tests 后才扩大真实 stage evidence。
-6. v1.1：分别迁移 content-analysis、report、fixture-only page-audit；report/PDF 拆成未来 document.render effect contract；web sync/API 由未来 WebRuntimeProfile lease 处理。
-7. Production/publish：单独处理 allowlist、credential resolution、审批、external-write、reconciliation、image/runtime smoke；未完成不切 production。
-8. Legacy retirement：inventory、freeze、drain、replay、ACK 旧 backlog 后再移除 wrapper。
+3. Bootstrap/mount boundary：实现 static manifest、QueueBinding、可信 file-reader seam、verifier/importer ports 和 deny evidence；只允许 geo-run 目标组件，不包含真实 verifier、module map 或 invocation。
+4. Resource custody：另立 HF-PR 合同，验收可信 issuer/public-key anchor、签名/freshness/replay verifier、rotation/revocation 和 exact resource custody；未 PASS 不得进入真实 worker/network。
+5. Offline geo slice：由 P3 独占 sealed import map，注入 synthetic SearchPort/LLM、receipt-bound ProductStatePort 和 deny NotificationPort，移除真实 provider/alert/DB/queue singleton 的全局静态 import，完成 network-none、queue isolation 和 worker certificate 的 web-sync exclusion；EvidenceSink 未验收前不宣称真实 invocation compliant。
+6. Evidence sink：完成 append order、crash、permission、contract tests 后才扩大真实 stage evidence。
+7. v1.1：分别迁移 content-analysis、report、fixture-only page-audit；report/PDF 拆成未来 document.render effect contract；web sync/API 由未来 WebRuntimeProfile lease 处理。
+8. Production/publish：单独处理 allowlist、credential resolution、审批、external-write、reconciliation、image/runtime smoke；未完成不切 production。
+9. Legacy retirement：inventory、freeze、drain、replay、ACK 旧 backlog 后再移除 wrapper。
 
 ### 12.3 Compatibility and rollback
 
@@ -482,19 +553,23 @@ live logs 只允许 run/stage、profile id、component、reason code、duration�
 
 一个 task 只能写自己的文件 scope；无新 lease 不得因“只是 import/test”扩大范围。第一 slice 小，不代表所有 adapter 已门控。
 
+依赖顺序为 `HF-P1 → HF-P2 → HF-PR-resource-custody PASS → HF-P3`。HF-PR 尚未在本合同获实现 lease；必须先另产出 interface、issuer/trust-anchor/replay-store、迁移/轮换/撤销和回滚合同并独立复审。没有 HF-PR PASS 时，HF-P2 standalone CLI 的 fail-closed exit 78 是正确结果，不是可绕过 blocker。
+
 | Lease | 允许写入 | 禁止 | 验收重点 |
 |---|---|---|---|
 | HF-P0-contract | 本文件 | 所有源码、schema、queue、CI、Compose | markdown/content/sensitive scan |
 | HF-P1-profile | 新 src/workers/harness/runtime-profile.ts、static-manifest.ts、queue-binding.ts；新 tests/contracts/runtime-profile.v1.test.ts、queue-binding.v1.test.ts、capability-port.v1.test.ts、capability-policy.v1.test.ts、policy-decision.v1.test.ts；新 vitest.offline.config.ts、tests/offline/setup.ts | index.ts、load-env.ts、默认 tests/setup.ts、业务 worker/provider | parser/precedence/exit-78/完整 capabilityPolicies/namespace |
-| HF-P2-bootstrap | 新 src/workers/offline-entry.ts、mount-registry.ts；仅入口 wiring 的独立 task 文件 | 业务 worker、geo channel/search/llm/alert、schema | pre-import manifest、dynamic mount、deny |
-| HF-P3-geo-offline | src/workers/geoRunWorker.ts、新 src/workers/offline-contract-smoke.ts、src/lib/geo/channel.ts、src/lib/search/index.ts、src/lib/search/llm_simulation.ts、src/lib/llm/index.ts、src/lib/llm/tracker.ts、src/lib/geo/budget.ts、src/lib/audit/logger.ts、src/lib/queue/geo.ts、src/lib/queue/connection.ts；新 src/lib/state/product-state.ts、src/lib/state/geo-run-product-state.ts、src/lib/alert/deny.ts；对应 geo/channel/search/llm/state/deny-notification/queue/worker/network-none tests | src/lib/alert/sender.ts、content/report/page/brand/scheduler/publish、EvidenceSink、schema、web/API、Dockerfile | injected synthetic SearchPort/LLM、isolated ProductStatePort、deny NotificationPort、QueueBinding、无真实 provider 静态 import、worker-only network-none |
+| HF-P2-bootstrap | 新 src/workers/offline-entry.ts、mount-registry.ts；新 tests/contracts/offline-bootstrap.v1.test.ts、mount-registry.v1.test.ts | 真实 file reader/verifier/trust anchor/issuer/replay store、module specifier/import map、node:fs/crypto/network、业务 worker、geo channel/search/llm/alert、schema、默认 setup、package/lock、Dockerfile、offline-deny-brand-monitor/offline-deny-scheduler-publish/worker-certificate/network-none tests；测试只用 memory reader/fake verifier，不新增 tracked fixture | immutable bundle、file-reader/verifier/importer ports、exit 78、pre-import manifest、gate-order、deny/invalid importer count=0；默认 CLI 仅 validate-only且真实 adapters缺失时必须拒绝 |
+| HF-P3-geo-offline | src/workers/geoRunWorker.ts、新 src/workers/offline-contract-smoke.ts、src/workers/offline-import-map.ts、src/lib/geo/channel.ts、src/lib/search/index.ts、src/lib/search/llm_simulation.ts、src/lib/llm/index.ts、src/lib/llm/tracker.ts、src/lib/geo/budget.ts、src/lib/audit/logger.ts、src/lib/queue/geo.ts、src/lib/queue/connection.ts；新 src/lib/state/product-state.ts、src/lib/state/geo-run-product-state.ts、src/lib/alert/deny.ts；新 tests/contracts/offline-import-closure.v1.test.ts 及对应 geo/channel/search/llm/state/deny-notification/queue/worker/network-none tests | src/lib/alert/sender.ts、content/report/page/brand/scheduler/publish、EvidenceSink、schema、web/API、Dockerfile；不得自带 issuer私钥或绕过HF-PR | requires HF-PR PASS；sealed static import map、injected synthetic SearchPort/LLM、isolated ProductStatePort、deny NotificationPort、QueueBinding、无真实 provider 静态 import、worker-only network-none |
 | HF-P4-alert-retention | src/lib/alert/sender.ts、src/workers/retentionWorker.ts；对应 production adapter/contract tests | geo/channel/search/llm、web/API、publisher、schema | production notification/retention policy；不属于 offline v1 证书 |
 | HF-P5-evidence | 新 src/workers/harness/evidence-sink.ts、evidence-sink.v1.test.ts、evidence-crash.v1.test.ts | 产品 DB/schema/migration、业务 worker、默认 setup | append order/crash/permission |
 | HF-P6-v11-workers | contentAnalysisWorker.ts、reportWorker.ts、pageAuditWorker.ts、相应 effect adapters/tests；未来 document.render 独立合同 | geo/search/llm/alert、web sync、schema | each capability evidence |
 | HF-P7-production-boundary | 独立 production profile/adapter/runtime/CI/container 文件，另立 lease | 产品 UI/编排/schema、CASTR | allowlist/reference/approval/runtime |
 | HF-P8-publish | cmsPublisherWorker.ts、distributionWorker.ts、边界 adapters/tests；新的 publish profile contract | SafetyFloor、GEO UI/DB、CASTR | approval/idempotency/unknown |
 
-HF-P3 planned tests 至少包括 src/lib/search/index.test.ts、src/lib/search/llm_simulation.test.ts、src/lib/geo/channel.test.ts、src/lib/llm/index.test.ts、src/lib/llm/tracker.test.ts、src/lib/alert/deny.test.ts、src/lib/state/geo-run-product-state.test.ts、src/lib/queue/geo.profile.test.ts、src/workers/geoRunWorker.profile.test.ts、tests/contracts/worker-certificate-excludes-web-sync.v1.test.ts 和 tests/integration/network-none-worker.v1.test.ts。offline-contract-smoke.ts 是被现有 worker 镜像复制规则包含的源码验收入口；本合同不新增 dist 或 build pipeline lease。
+HF-P3 planned tests 至少包括 tests/contracts/offline-import-closure.v1.test.ts、src/lib/search/index.test.ts、src/lib/search/llm_simulation.test.ts、src/lib/geo/channel.test.ts、src/lib/llm/index.test.ts、src/lib/llm/tracker.test.ts、src/lib/alert/deny.test.ts、src/lib/state/geo-run-product-state.test.ts、src/lib/queue/geo.profile.test.ts、src/workers/geoRunWorker.profile.test.ts、tests/contracts/worker-certificate-excludes-web-sync.v1.test.ts 和 tests/integration/network-none-worker.v1.test.ts。offline-contract-smoke.ts 是被现有 worker 镜像复制规则包含的源码验收入口；本合同不新增 dist 或 build pipeline lease。
+
+`tests/contracts/offline-deny-brand-monitor.v1.test.ts` 与 `offline-deny-scheduler-publish.v1.test.ts` 也归 HF-P3；HF-P2 不得借测试名义读取或加载这些旧业务模块。HF-P2 只拥有上表两个 bootstrap/mount-registry contract tests。
 
 geo channel、search/LLM adapter、deny NotificationPort、ProductStatePort、QueueBinding 和专用 Vitest config/setup 都有明确 owner。src/lib/alert/sender.ts 明确保留给 HF-P4，HF-P3 通过移除其全局静态 import 避免加载。web sync/API 不属于 worker-only v1；本证书只在 manifest 中明确排除，并测试 worker path 不得调用 sync path。真实 API 拒绝行为不在本合同承诺内，未来另立 WebRuntimeProfile lease。
 
@@ -502,62 +577,36 @@ geo channel、search/LLM adapter、deny NotificationPort、ProductStatePort、Qu
 
 以下命令是实现后的验收入口；当前文档状态下 planned/not yet runnable，不是已通过证据。命令不 source 项目 .env，连接信息只来自 task-local environment/receipt。
 
-### 14.1 Parser/bootstrap and contract
+### 14.1 P1/P2 parser/bootstrap and contract
 
 ~~~sh
-env -i PATH="$PATH" NODE_ENV=test WORKER_RUNTIME_PROFILE=offline-test-v1 \
-  OFFLINE_RESOURCE_RECEIPT_REF="$OFFLINE_RESOURCE_RECEIPT_REF" \
-  corepack pnpm exec tsx src/workers/offline-entry.ts --validate-only
-test "$?" -eq 0
-
 corepack pnpm exec vitest --config vitest.offline.config.ts run \
   tests/contracts/runtime-profile.v1.test.ts \
   tests/contracts/queue-binding.v1.test.ts \
   tests/contracts/capability-port.v1.test.ts \
   tests/contracts/capability-policy.v1.test.ts \
-  tests/contracts/policy-decision.v1.test.ts
+  tests/contracts/policy-decision.v1.test.ts \
+  tests/contracts/offline-bootstrap.v1.test.ts \
+  tests/contracts/mount-registry.v1.test.ts
 ~~~
 
-覆盖缺失/未知 profile、exit 78、exact precedence、SafetyFloor 不可覆盖、CapabilityName 完整矩阵/未知或缺失 deny、reference shape、mount-before-import 和 producer/consumer binding 一致性。
+覆盖缺失/未知 profile、receipt ref/reader/verifier 缺失与不匹配、伪造/过期/重放/unknown issuer/坏签名的 port-level拒绝、exit 78、exact precedence、SafetyFloor 不可覆盖、CapabilityName 完整矩阵/未知或缺失 deny、reference shape、validate-only 不 import、mount boundary importer-after-gates、deny/invalid importer count=0 和 producer/consumer binding 一致性。HF-P2 测试只使用 memory reader/fake verifier；fake PASS 只能证明 port/gate wiring，不能成为 resource custody 证据。task-root/descriptor/owner/mode/symlink/size、真实 signature/trust-anchor/replay tests 归 HF-PR。HF-PR 前不得记录 standalone CLI 正向 PASS。
 
-### 14.2 Real Docker network-none startup/contract
+若 host 没有 `corepack`，可使用项目 `packageManager` 锁定的 exact `pnpm@11.25.0` 二进制替代，并在回执记录 Node/pnpm 版本；不得静默使用未知版本。
 
-network-none 只验证完全无网络的 startup/contract path，不能代替 internal-only E2E：
+### 14.2 HF-P3 + HF-PR real Docker network-none startup/contract
 
-~~~sh
-docker run --rm --network none --read-only \
-  --env WORKER_RUNTIME_PROFILE=offline-test-v1 \
-  --env OFFLINE_VALIDATE_ONLY=true \
-  --env OFFLINE_RESOURCE_RECEIPT_REF="$OFFLINE_RESOURCE_RECEIPT_REF" \
-  geo-seo-worker:<exact-sha-image> \
-  ./node_modules/.bin/tsx src/workers/offline-entry.ts --validate-only
+BLOCKED / NO COMMAND AUTHORIZED。network-none 只验证完全无网络的 startup/contract path，不能代替 internal-only E2E；但当前合同尚未定义 HF-PR 的 exact launcher/wiring、trust-anchor/replay-store adapter 或每进程 fresh signed receipt 流程，所以不存在可运行且可据以签收的 Docker 命令。直接在 Docker 中调用 `offline-entry.ts` 无法构造真实 adapter，也不能产生正向证据。
 
-docker run --rm --network none \
-  geo-seo-worker:<exact-sha-image> \
-  ./node_modules/.bin/tsx src/workers/offline-contract-smoke.ts \
-  --mode=network-none-contract
-~~~
+必须先单独批准 HF-PR 合同与 exact implementation lease，并由后续合同修订给出 launcher、wiring、fresh receipt、candidate/image audience 绑定、退出码及清理命令。HF-PR PASS 与 HF-P3 sealed import map 完成前，本门禁保持 BLOCKED；不得把占位命令、默认 standalone exit 78 或测试 fake verifier 记为 network-none PASS。
 
-要求容器无网络 egress：有效 offline profile 的 `--validate-only` 必须退出 `0`；缺失、未知或非法 profile 由独立 negative case 精确断言退出 `78`。不能启动 provider、Prisma/Redis consumer 或任何外部 effect，不能写作完整 E2E 通过。exact-sha-image 是文档占位符。
+### 14.3 HF-P3 + HF-PR internal-only E2E and socket sentinel
 
-### 14.3 Internal-only E2E and socket sentinel
+BLOCKED / NO COMMAND AUTHORIZED。完整 GEO worker E2E 最终应使用 Docker internal network，只连接 task-scoped PostgreSQL/Redis、不发布 host port，并同时运行 socket/egress sentinel；但当前没有获批的 HF-PR launcher/wiring、共享原子 replay store、每进程 fresh signed receipt 或对应清理协议，因此本合同不授权任何 internal-only E2E 命令。
 
-完整 GEO worker E2E 另使用 Docker internal network，只连接 task-scoped PostgreSQL/Redis，不发布 host port，并同时运行 socket/egress sentinel。该 worker-only E2E 不启动或调用 web/API：
+后续独立合同必须为每个 process/stage 签发不同 receipt ref/nonce，并精确定义共享 replay store、内部网络、launcher、sentinel、资源清理与证据格式。获批后才可验证 worker 只连接 receipt 指定的内部 DB/Redis，且没有 public search、SearXNG、真实 provider、CMS、分发、通知或非内部访问；brand monitor/scheduler/publish 没有实例、timer、repeat job 或 consumer。它与 network-none startup/contract 是两个不同门禁，不可混称，也不能据此认证 web/API。
 
-~~~sh
-docker network create --internal "geo-seo-offline-e2e-<scope-id>"
-docker run --rm --network "geo-seo-offline-e2e-<scope-id>" \
-  --env WORKER_RUNTIME_PROFILE=offline-test-v1 \
-  --env OFFLINE_RESOURCE_RECEIPT_REF="$OFFLINE_RESOURCE_RECEIPT_REF" \
-  geo-seo-worker:<exact-sha-image> \
-  ./node_modules/.bin/tsx src/workers/offline-contract-smoke.ts \
-  --mode=internal-e2e
-docker network rm "geo-seo-offline-e2e-<scope-id>"
-~~~
-
-必须验证 worker 只连接 receipt 指定的内部 DB/Redis；sentinel 未观察到 public search、SearXNG、真实 provider、CMS、分发、通知或非内部访问；brand monitor/scheduler/publish 没有实例、timer、repeat job 或 consumer。它与 network-none startup/contract 是两个不同门禁，不可混称，也不能据此认证 web/API。
-
-### 14.4 Worker certificate exclusion and product gates
+### 14.4 HF-P3 worker certificate exclusion and product gates
 
 ~~~sh
 corepack pnpm exec vitest --config vitest.offline.config.ts run \
@@ -568,7 +617,7 @@ corepack pnpm exec vitest --config vitest.offline.config.ts run \
   tests/integration/network-none-worker.v1.test.ts
 ~~~
 
-worker-certificate-excludes-web-sync.v1.test.ts 只验证证书 manifest 排除 web sync/API/browser，并禁止 worker dependency graph 调用 sync path；它不启动 API、也不承诺真实 API 拒绝行为。默认 tests/setup.ts、旧 pnpm worker 和 load-env.ts 的通过结果不能作为本 profile evidence。WebRuntimeProfile 与真实 API negative tests 需未来独立 lease。
+本小节全部属于 HF-P3，不是 HF-P2 acceptance；在 HF-PR contract/PASS 前也不授权 runtime 执行。worker-certificate-excludes-web-sync.v1.test.ts 只验证证书 manifest 排除 web sync/API/browser，并禁止 worker dependency graph 调用 sync path；它不启动 API、也不承诺真实 API 拒绝行为。默认 tests/setup.ts、旧 pnpm worker 和 load-env.ts 的通过结果不能作为本 profile evidence。WebRuntimeProfile 与真实 API negative tests 需未来独立 lease。
 
 实现相关 slice 还需按变更相关性运行：
 
@@ -584,7 +633,7 @@ corepack pnpm build
 
 ### 14.5 Evidence checklist and current status
 
-正式回执必须包含 repository/worktree、branch、完整 HEAD SHA、status、profile/version、完整 capabilityPolicies、policy fingerprint、QueueBinding、resource receipt、enabled workers、mount/invoke decisions、stage outcomes、retry dispositions、命令结果、network/container/process cleanup、未运行门禁和 rollback SHA；不得包含 secret。
+正式回执必须包含 repository/worktree、branch、完整 HEAD SHA、status、profile/version、完整 capabilityPolicies、policy fingerprint、QueueBinding、verified receipt ref、issuer/key id、payload digest、脱敏 scope/资源计数摘要、enabled workers、mount/invoke decisions、stage outcomes、retry dispositions、命令结果、network/container/process cleanup、未运行门禁和 rollback SHA；不得记录完整 envelope、地址、端口、路径、signature、secret 或原始错误/stack。
 
 当前合同明确：
 
