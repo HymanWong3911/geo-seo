@@ -6,8 +6,12 @@
 set -u
 
 BASE="${1:-http://localhost:3010}"
-EMAIL="${SMOKE_EMAIL:-admin@example.com}"
-PASSWORD="${SMOKE_PASSWORD:-Admin@2026}"
+EMAIL="${SMOKE_EMAIL:-${SEED_ADMIN_EMAIL:-}}"
+PASSWORD="${SMOKE_PASSWORD:-${SEED_ADMIN_PASSWORD:-}}"
+if [[ -z "$EMAIL" || -z "$PASSWORD" ]]; then
+  printf '请配置 SMOKE_EMAIL / SMOKE_PASSWORD\n' >&2
+  exit 2
+fi
 COOKIE="$(mktemp -t smoke.XXXXXX)"
 trap 'rm -f "$COOKIE"' EXIT
 

@@ -19,11 +19,11 @@
 - ✅ **M10 跨平台分发**（已实现，知乎/微信/飞书/Notion/Webhook 5 渠道）
 - ✅ **M11 品牌监控 + 协作**（已实现，DuckDuckGo 扫描 + 评论 + 通知）
 
-**测试覆盖率**：75 个单测 + 9 个 E2E 全过；TypeScript 0 错误。
+**当前质量门禁**：150 个单测、TypeScript、ESLint、Prisma 校验与 Next.js production build 通过；`pnpm audit` 为 0 个已知漏洞。CI 另跑 9 个确定性 E2E。
 
 ## 技术栈
 
-- **前端**：Next.js 14 (App Router) + TypeScript + React 18 + Tailwind CSS
+- **前端**：Next.js 15 (App Router) + TypeScript + React 18 + Tailwind CSS
 - **后端**：Next.js API Routes + Server Actions
 - **数据库**：PostgreSQL 15+（27 个 model + 13 个 enum，v1.2）
 - **缓存 / 队列**：Redis 7 + BullMQ
@@ -38,8 +38,8 @@
 
 ### 前置依赖
 
-- Node.js 20+
-- pnpm 10+
+- Node.js 22.13+（pnpm 11.25 的最低运行要求）
+- pnpm 11.25+
 - Docker + Docker Compose
 
 ### 1. 装依赖
@@ -59,6 +59,9 @@ cp .env.example .env
 DATABASE_URL="postgresql://geo_seo:geo_seo_dev@localhost:5434/geo_seo"
 REDIS_URL="redis://localhost:6380"
 AUTH_SECRET="<32 字节随机 hex，用 `openssl rand -hex 32` 生成>"
+SEED_ADMIN_EMAIL="admin@example.com"
+SEED_ADMIN_PASSWORD="<至少 12 位的唯一初始密码>"
+CMS_SECRET_ENCRYPTION_KEY="<32 字节 base64，用 `openssl rand -base64 32` 生成>"
 LLM_BASE_URL="https://api.minimaxi.com/v1"  # MiniMax 订阅版
 LLM_API_KEY="sk-cp-..."
 ```
@@ -73,14 +76,14 @@ docker compose up -d postgres redis
 - PostgreSQL: `localhost:5434`（容器内 5432）
 - Redis: `localhost:6380`（容器内 6379）
 
-> **端口选择原因**：避开 5432/6379/3000-3005 的常见冲突。
+> **端口选择原因**：避开 5432/6379/3000-3005 的常见冲突；有占用时可在 `.env` 覆盖 `POSTGRES_PORT`、`REDIS_PORT`、`APP_PORT`。
 
 ### 4. 初始化数据库
 
 ```bash
 pnpm prisma:generate
 pnpm prisma:migrate         # 跑 migration
-pnpm prisma:seed            # 创建 ADMIN 账号 + 示例项目
+pnpm prisma:seed            # 使用上面的显式 seed 凭据创建 ADMIN + 示例项目
 ```
 
 ### 5. 启动 Web
@@ -94,7 +97,7 @@ pnpm dev
 
 ```bash
 pnpm worker
-# → BullMQ consumers: pageAudit / geoRun / contentAnalysis / report / scheduler / retention / cmsPublish
+# → BullMQ consumers: pageAudit / geoRun / contentAnalysis / report / scheduler / cmsPublish / distribution
 ```
 
 Worker 负责：
@@ -102,16 +105,13 @@ Worker 负责：
 - 每分钟心跳 + 每日 00:30 自动跑 GEO 监测、09:00 告警汇总、每月 1 日 03:00 清理过期数据
 - 每 6 小时自动跑品牌监控
 
+出站安全默认拒绝 localhost、私有网段、云 metadata 地址和跨目标重定向。自定义 Webhook、告警、爬虫与自建 CMS 可用 `.env.example` 中各自的 `*_EGRESS_ALLOWLIST` 收紧 host；只有确有内网业务时才显式开启 `*_ALLOW_PRIVATE_HOSTS`。
+
+GEO 的 `llm_simulation` 结果和内容生成的 mock / 模板兜底会写入 provenance，并在界面显示醒目标识；模拟结果不计入正式 GEO 可见度分数。`GEO_RUN_MOCK_LLM=true` 会强制绕过所有已配置的真实搜索渠道，保证 CI/离线回归不产生外部调用。
+
 ### 7. 登录
 
-打开 http://localhost:3010，用：
-
-```
-email:    admin@example.com
-password: Admin@2026
-```
-
-⚠️ **生产环境请立刻修改 ADMIN 密码。**
+打开 http://localhost:3010，使用 `.env` 中的 `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`。默认要求首次登录修改密码；仓库不再内置通用管理员密码。
 
 ## 端口总览
 
@@ -138,15 +138,16 @@ pnpm prisma:seed        # 跑 seed
 pnpm prisma:studio      # 打开 Prisma Studio（可视化）
 
 # 测试 / 质量
-pnpm test               # 全部测试（单测 + E2E）
+pnpm test               # 单元与路由测试（不含 E2E）
+pnpm test:e2e           # E2E；需 web + worker + DB + Redis
 pnpm test:watch         # watch 模式
 pnpm typecheck          # tsc --noEmit
-pnpm lint               # next lint
+pnpm lint               # ESLint
 
 # 端到端
 pnpm dev                # 终端 1
 pnpm worker             # 终端 2
-pnpm test tests/e2e     # 终端 3（需 .env 含 LLM_API_KEY）
+GEO_RUN_MOCK_LLM=true pnpm test:e2e  # 终端 3；也可配置真实 LLM_API_KEY
 ```
 
 ## 关键功能流（端到端）
@@ -230,7 +231,8 @@ scheduler 每 6h 触发
 | `src/middleware.ts` | 路由级权限校验（edge runtime，getToken） |
 | `src/lib/auth.ts` | NextAuth.js v5 + 项目级权限 |
 | `src/lib/audit/logger.ts` | 审计日志写入 |
-| `src/lib/queue.ts` | BullMQ + ioredis 连接 + 7 个队列 |
+| `src/lib/queue.ts` | 延迟连接的 BullMQ / ioredis 共享连接 |
+| `src/lib/queue/*` | 按任务类型延迟创建的队列生产者 |
 | `src/lib/llm/tracker.ts` | LLM 调用追踪（成本 + 时长） |
 | `src/lib/geo/channel.ts` | GEO 渠道调度（智能跳过无 key 渠道） |
 | `src/lib/search/index.ts` | RealSearchProvider 注册 + `getAvailableChannels()` |
@@ -248,7 +250,7 @@ scheduler 每 6h 触发
 
 - `geo-run-flow.test.ts`：登录 → 创建关键词/问题/品牌 → 触发 GEO run → 等 worker 完成 → 验证落库 + metrics + 审计日志
 
-**前提**：需启动 `pnpm dev` + `pnpm worker`，且 `.env` 中 `LLM_API_KEY` 已配置。
+**前提**：需启动 `pnpm dev` + `pnpm worker`；配置 `GEO_RUN_MOCK_LLM=true` 可完全离线确定性运行，也可使用真实 `LLM_API_KEY`。
 
 ## 故障排查速查
 

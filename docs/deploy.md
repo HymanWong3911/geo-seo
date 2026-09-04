@@ -28,8 +28,8 @@
 
 ### 1.2 软件
 
-- Node.js 20+
-- pnpm 9+
+- Node.js 22.13+（pnpm 11.25 的最低运行要求）
+- pnpm 11.25+
 - Docker 24+ 和 Docker Compose v2
 - PostgreSQL 15+（如不用 Docker）
 - Redis 7+（如不用 Docker）
@@ -42,8 +42,15 @@
 DATABASE_URL=postgresql://geo_seo:STRONG_PASSWORD@postgres:5432/geo_seo
 REDIS_URL=redis://redis:6379
 AUTH_SECRET=<32 字节随机字符串，可用 `openssl rand -hex 32`>
+AUTH_TRUST_HOST=true
+CMS_SECRET_ENCRYPTION_KEY=<32 字节密钥，可用 `openssl rand -base64 32`>
 APP_BASE_URL=https://your-domain.com
+POSTGRES_USER=geo_seo
+POSTGRES_PASSWORD=<数据库强密码>
+POSTGRES_DB=geo_seo
 ```
+
+`AUTH_TRUST_HOST=true` 仅应在反向代理已校验并重写可信 `Host`/`X-Forwarded-Host` 的生产边界后开启；否则 Auth.js 会主动拒绝未知 host。
 
 推荐配置（生产环境）：
 
@@ -66,7 +73,17 @@ ALERT_SMTP_USER=alert@your-domain.com
 ALERT_SMTP_PASS=xxx
 ALERT_SMTP_FROM=alert@your-domain.com
 ALERT_SMTP_TO=ops@your-domain.com
+
+# 出站 allowlist（逗号分隔；空值只放行任意公网 host，不放行内网）
+ALERT_WEBHOOK_ALLOWLIST=open.feishu.cn,qyapi.weixin.qq.com,hooks.slack.com
+DISTRIBUTION_WEBHOOK_ALLOWLIST=hooks.example.com
+CMS_EGRESS_ALLOWLIST=cms.example.com
+CRAWLER_EGRESS_ALLOWLIST=www.example.com,*.example.com
 ```
+
+所有动态出站 URL 默认要求 HTTPS，并拒绝 loopback、RFC1918、link-local、云 metadata 与保留地址。若自建 CMS 或测试站确实位于内网，需按通道显式设置 `*_ALLOW_PRIVATE_HOSTS=true`；自建 CMS、Webhook 或告警通道使用 HTTP 时还需设置对应的 `*_ALLOW_HTTP=true`。不要在公网部署中使用这些放宽开关。
+
+生产 GEO 指标会排除 `llm_simulation` 结果；内容生成的 mock 和模板兜底也会作为 synthetic provenance 显示，不能绕过人工审核直接发布。
 
 ---
 
@@ -81,16 +98,14 @@ cd geo-seo
 
 # 2. 配置环境变量
 cp .env.example .env
-# 编辑 .env，至少填 DATABASE_URL / REDIS_URL / AUTH_SECRET
+# 编辑 .env，至少填 AUTH_SECRET / CMS_SECRET_ENCRYPTION_KEY /
+# POSTGRES_* / SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
 
-# 3. 启动所有服务
+# 3. 构建并启动。migrate 一次性服务会先执行 migration，成功后再启动 web/worker
 docker compose up -d
 
-# 4. 初始化数据库
-docker compose exec web pnpm prisma migrate deploy
-docker compose exec web pnpm prisma db seed
-# 或者
-docker compose exec web pnpm prisma:seed
+# 4. 首次部署才执行 seed（凭据必须已显式写入 .env）
+docker compose run --rm worker ./node_modules/.bin/tsx src/prisma/seed.ts
 ```
 
 ### 2.2 服务清单
@@ -99,11 +114,12 @@ docker compose exec web pnpm prisma:seed
 
 | 服务 | 端口 | 说明 |
 |---|---|---|
-| `web` | 3000 | Next.js 主应用 |
+| `web` | 3010 | Next.js 主应用 |
 | `worker` | - | BullMQ worker（无端口） |
-| `postgres` | 5432 | PostgreSQL |
-| `redis` | 6379 | Redis |
-| `mailhog` | 8025 (UI) / 1025 (SMTP) | 邮件测试（仅 dev） |
+| `postgres` | 5434 | PostgreSQL（host 端口，可用 `POSTGRES_PORT` 覆盖） |
+| `redis` | 6380 | Redis（host 端口，可用 `REDIS_PORT` 覆盖） |
+| `migrate` | - | 每次部署先执行的 Prisma migration one-shot |
+| `mailhog` | 8025 (UI) / 1025 (SMTP) | 邮件测试（`--profile dev`） |
 | `pgadmin` | 5050 | 数据库管理（profile=tools 时启动） |
 
 ### 2.3 验证
@@ -113,20 +129,21 @@ docker compose exec web pnpm prisma:seed
 docker compose logs -f web
 
 # 健康检查
-curl http://localhost:3000/api/health
+curl http://localhost:3010/api/health
 ```
 
 ### 2.4 启动 pgadmin（可选）
 
 ```bash
 docker compose --profile tools up -d pgadmin
-# 访问 http://localhost:5050
-# 默认账号：admin@example.com / admin
+# 访问 http://localhost:5050；生产环境请覆盖 PGADMIN_DEFAULT_* 变量
 ```
 
 ---
 
 ## 3. 手动部署
+
+> GitHub Actions 部署使用不可变 `sha-<完整提交 SHA>` 镜像标签。CI 在 `main` 构建并推送 web/worker；手动触发 Deploy workflow 时必须填写该标签。远端会先运行 migration，再只替换 web/worker，并通过容器内 `/api/health` 验证，不再依赖可漂移的 `latest`。
 
 ### 3.1 启动 PostgreSQL
 
@@ -221,7 +238,7 @@ server {
   client_max_body_size 20M;
 
   location / {
-    proxy_pass http://127.0.0.1:3000;
+    proxy_pass http://127.0.0.1:3010;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -261,21 +278,7 @@ docker compose up -d
 
 ### 4.2 Playwright 浏览器
 
-页面诊断 worker 需要 Chromium。如果内网无法下载浏览器：
-
-```bash
-# 在有公网的机器上下载
-docker run --rm -v $(pwd)/browsers:/browsers mcr.microsoft.com/playwright:v1.46.0-jammy \
-  sh -c "npx playwright install chromium"
-
-# 拷贝 browsers 目录到内网
-scp -r browsers/ user@internal-server:/opt/geo-seo/
-
-# 启动时挂载
-docker compose exec worker npx playwright install chromium
-```
-
-或者用 `npx playwright install --with-deps` 在 worker 启动脚本里跑。
+`Dockerfile.worker` 已安装 Alpine Chromium，并通过 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` 交给 Playwright 使用；无需容器启动后联网下载浏览器。
 
 ---
 
@@ -315,7 +318,7 @@ retention worker 每月 1 日 03:00 自动：
 如需手动触发：
 
 ```bash
-docker compose exec worker tsx -e "import('./src/workers/retentionWorker.js').then(m => m.runRetentionCleanup())"
+docker compose exec worker pnpm exec tsx -e "import('./src/workers/retentionWorker.ts').then(m => m.runRetentionCleanup())"
 ```
 
 ---
@@ -332,16 +335,8 @@ git pull
 # 2. 装新依赖
 pnpm install --frozen-lockfile
 
-# 3. 跑新 migration
-pnpm prisma migrate deploy
-
-# 4. 重新构建
-pnpm build
-
-# 5. 重启服务
-docker compose restart web worker
-# 或手动：
-# sudo systemctl restart geo-seo-web geo-seo-worker
+# 3. 构建并滚动更新；migrate 必须成功，web/worker 才会启动
+docker compose up -d --build
 ```
 
 ### 6.2 回滚
@@ -405,7 +400,7 @@ SELECT
 |---|---|
 | `pnpm install` 失败 | 切镜像源：`pnpm config set registry https://registry.npmmirror.com` |
 | `prisma migrate` 失败 | `docker compose ps` 看 pg 健康；`DATABASE_URL` 正确？ |
-| `next start` 报 ECONNREFUSED | Redis 没起？`docker compose ps redis` |
+| 业务队列报 ECONNREFUSED | Redis 没起或容器内 `REDIS_URL` 未指向 `redis:6379` |
 | 登录页 404 | `src/app/login/page.tsx` 存在？NextAuth 路由挂载？ |
 
 ### 8.2 GEO 监测问题

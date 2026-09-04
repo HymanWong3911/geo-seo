@@ -8,8 +8,9 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const BASE = process.env.SMOKE_BASE_URL ?? "http://localhost:3010";
-const EMAIL = process.env.SMOKE_EMAIL ?? "admin@example.com";
-const PASSWORD = process.env.SMOKE_PASSWORD ?? "Admin@2026";
+const EMAIL = process.env.SMOKE_EMAIL ?? process.env.SEED_ADMIN_EMAIL ?? "";
+const PASSWORD = process.env.SMOKE_PASSWORD ?? process.env.SEED_ADMIN_PASSWORD ?? "";
+if (!EMAIL || !PASSWORD) throw new Error("请配置 SMOKE_EMAIL / SMOKE_PASSWORD");
 const POLL_TIMEOUT_MS = 8 * 60 * 1000;
 const OUT_DIR = "/tmp/demo-dumps";
 

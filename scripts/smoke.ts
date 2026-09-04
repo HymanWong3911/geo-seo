@@ -3,9 +3,10 @@
 import "dotenv/config";
 
 const BASE = process.env.SMOKE_BASE_URL ?? "http://localhost:3010";
-const EMAIL = "admin@example.com";
-const PASSWORD = "Admin@2026";
-const PROJECT_ID = "cmq9d9xzp001io8hucplvl783";
+const EMAIL = process.env.SMOKE_EMAIL ?? process.env.SEED_ADMIN_EMAIL ?? "";
+const PASSWORD = process.env.SMOKE_PASSWORD ?? process.env.SEED_ADMIN_PASSWORD ?? "";
+if (!EMAIL || !PASSWORD) throw new Error("请配置 SMOKE_EMAIL / SMOKE_PASSWORD");
+let projectId = process.env.SMOKE_PROJECT_ID ?? "";
 const DEBUG = process.env.SMOKE_DEBUG === "1";
 
 interface Check { name: string; status: "PASS" | "FAIL"; detail: string; ms: number; }
@@ -110,11 +111,12 @@ async function main() {
     const { status, body } = await call("/api/projects", { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const list = body.data ?? body;
+    if (!projectId && Array.isArray(list)) projectId = list[0]?.id ?? "";
     return { ok: Array.isArray(list) && list.length > 0, detail: `${list.length} 个项目` };
   });
 
   await check("4.项目详情", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const p = body.data ?? body;
     return { ok: !!p.id, detail: `${p.name} (${p.primaryBrand})` };
@@ -129,69 +131,69 @@ async function main() {
   });
 
   await check("6.GEO runs", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/geo/runs`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}/geo/runs`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const runs = body.data ?? body;
     return { ok: true, detail: `${runs.length} 个 runs` };
   });
 
   await check("7.关键词", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/keywords`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}/keywords`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const kw = body.data ?? body;
     return { ok: true, detail: `${Array.isArray(kw) ? kw.length : "?"} 个关键词` };
   });
 
   await check("8.品牌", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/brands`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}/brands`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const list = body.data ?? body;
     return { ok: true, detail: `${Array.isArray(list) ? list.length : 0} 个品牌` };
   });
 
   await check("9.品牌提及", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/brand-mentions?limit=5`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}/brand-mentions?limit=5`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const list = body.data ?? body;
     return { ok: true, detail: `${Array.isArray(list) ? list.length : 0} 条` };
   });
 
   await check("10.任务", async () => {
-    const { status, body } = await call(`/api/tasks?projectId=${PROJECT_ID}`, { auth: true });
+    const { status, body } = await call(`/api/tasks?projectId=${projectId}`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const list = body.data ?? body;
     return { ok: true, detail: `${Array.isArray(list) ? list.length : 0} 个任务` };
   });
 
   await check("11.草稿", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/drafts`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}/drafts`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const list = body.data ?? body;
     return { ok: true, detail: `${Array.isArray(list) ? list.length : 0} 个草稿` };
   });
 
   await check("12.分发目标", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/distribution-targets`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}/distribution-targets`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const list = body.data ?? body;
     return { ok: true, detail: `${Array.isArray(list) ? list.length : 0} 个目标` };
   });
 
   await check("13.分发日志", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/distribution-logs?limit=5`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}/distribution-logs?limit=5`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const list = body.data ?? body;
     return { ok: true, detail: `${Array.isArray(list) ? list.length : 0} 条` };
   });
 
   await check("14.仪表盘", async () => {
-    const { status, body } = await call(`/api/dashboard/summary?projectId=${PROJECT_ID}`, { auth: true });
+    const { status, body } = await call(`/api/dashboard/summary?projectId=${projectId}`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     return { ok: true, detail: `keys: ${Object.keys(body.data ?? body).slice(0,4).join(",")}` };
   });
 
   await check("15.项目健康", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/health`, { auth: true });
+    const { status, body } = await call(`/api/projects/${projectId}/health`, { auth: true });
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     return { ok: true, detail: `status=${JSON.stringify(body.data ?? body).slice(0,80)}` };
   });

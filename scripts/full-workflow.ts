@@ -16,9 +16,10 @@
 import "dotenv/config";
 
 const BASE = process.env.WORKFLOW_BASE_URL ?? "http://localhost:3010";
-const EMAIL = "admin@example.com";
-const PASSWORD = "Admin@2026";
-const PROJECT_ID = process.env.WORKFLOW_PROJECT_ID ?? "cmq9d9xzp001io8hucplvl783";
+const EMAIL = process.env.WORKFLOW_EMAIL ?? process.env.SEED_ADMIN_EMAIL ?? "";
+const PASSWORD = process.env.WORKFLOW_PASSWORD ?? process.env.SEED_ADMIN_PASSWORD ?? "";
+if (!EMAIL || !PASSWORD) throw new Error("请配置 WORKFLOW_EMAIL / WORKFLOW_PASSWORD");
+let projectId = process.env.WORKFLOW_PROJECT_ID ?? "";
 const DEBUG = process.env.WORKFLOW_DEBUG === "1";
 
 const WEBHOOK_TARGET_NAME = "workflow-e2e-webhook";
@@ -127,12 +128,12 @@ async function pickLowestScorePage(): Promise<{ pageId: string; url: string; sco
   const latestByPage = new Map<string, any>();
   for (const a of allAudits) {
     const pid = a.page?.projectId;
-    if (pid !== PROJECT_ID) continue;
+    if (pid !== projectId) continue;
     if (!latestByPage.has(a.pageId)) latestByPage.set(a.pageId, a);
   }
   if (latestByPage.size === 0) {
     info("no audit history, will run fresh audit");
-    const proj = await call("GET", `/api/projects/${PROJECT_ID}`);
+    const proj = await call("GET", `/api/projects/${projectId}`);
     const domain = proj.data?.data?.domain ?? "example.com";
     return { pageId: "n/a", url: `https://${domain}/`, score: 0, title: proj.data?.data?.name ?? null };
   }
@@ -150,7 +151,7 @@ async function pickLowestScorePage(): Promise<{ pageId: string; url: string; sco
 async function runAuditOnPage(pageId: string, url: string): Promise<{ auditId: string; score: number; findingsCount: number }> {
   step("🔍", "3/10 实时审计 (抓取 + 评分)");
   info(`url = ${url}`);
-  const r = await call("POST", `/api/projects/${PROJECT_ID}/audits`, { url, sync: true, pageId }, { timeoutMs: 120_000 });
+  const r = await call("POST", `/api/projects/${projectId}/audits`, { url, sync: true, pageId }, { timeoutMs: 120_000 });
   if (r.status !== 201 && r.status !== 200) throw new Error(`audit failed status=${r.status}: ${r.text}`);
   const auditId = r.data?.data?.auditId ?? r.data?.data?.id ?? r.data?.id;
   const score = r.data?.data?.score ?? 0;
@@ -160,7 +161,7 @@ async function runAuditOnPage(pageId: string, url: string): Promise<{ auditId: s
 }
 
 async function getKeywords(): Promise<string[]> {
-  const r = await call("GET", `/api/projects/${PROJECT_ID}/keywords`);
+  const r = await call("GET", `/api/projects/${projectId}/keywords`);
   const kws: any[] = r.data?.data ?? [];
   return kws.map(k => k.text).slice(0, 5);
 }
@@ -168,7 +169,7 @@ async function getKeywords(): Promise<string[]> {
 async function generateDraft(topic: string, keywords: string[]): Promise<{ draftId: string; title: string }> {
   step("🤖", "4/10 AI 生成内容草稿");
   info(`topic = ${topic}, keywords = ${keywords.join(", ")}`);
-  const r = await call("POST", `/api/projects/${PROJECT_ID}/drafts/generate`, {
+  const r = await call("POST", `/api/projects/${projectId}/drafts/generate`, {
     topic,
     targetKeywords: keywords,
     length: 1200,
@@ -196,13 +197,13 @@ async function submitAndApprove(draftId: string): Promise<void> {
 
 async function ensureWebhookTarget(): Promise<{ targetId: string }> {
   step("🔗", "6/10 准备 webhook 分发目标");
-  const list = await call("GET", `/api/projects/${PROJECT_ID}/distribution-targets`);
+  const list = await call("GET", `/api/projects/${projectId}/distribution-targets`);
   const existing = (list.data?.data ?? []).find((t: any) => t.name === WEBHOOK_TARGET_NAME);
   if (existing) {
     ok(`reusing existing target ${existing.id}`);
     return { targetId: existing.id };
   }
-  const create = await call("POST", `/api/projects/${PROJECT_ID}/distribution-targets`, {
+  const create = await call("POST", `/api/projects/${projectId}/distribution-targets`, {
     name: WEBHOOK_TARGET_NAME,
     platform: "CUSTOM_WEBHOOK",
     config: { url: WEBHOOK_URL },
@@ -246,7 +247,7 @@ async function triggerGeoRun(): Promise<{ runId: string }> {
   step("🌐", "7/10 触发 GEO 运行 (AI 搜索引擎可见度检测)");
   info("sync 模式:等待全部 Q&A 完成(可能 1-3 分钟)");
   // sync 模式:同步等所有 channel 跑完,直接拿到结果
-  const r = await call("POST", `/api/projects/${PROJECT_ID}/geo/runs`, { sync: true }, { timeoutMs: 600_000 });
+  const r = await call("POST", `/api/projects/${projectId}/geo/runs`, { sync: true }, { timeoutMs: 600_000 });
   if (r.status !== 200 && r.status !== 201) throw new Error(`geo trigger failed: ${r.text}`);
   const data = r.data?.data ?? r.data ?? {};
   const runId = data.runId ?? data.id;
@@ -256,7 +257,7 @@ async function triggerGeoRun(): Promise<{ runId: string }> {
   } else {
     // sync 模式已经执行完,直接从 DB 查 status
     if (runId) {
-      const listRes = await call("GET", `/api/projects/${PROJECT_ID}/geo/runs?pageSize=20`);
+      const listRes = await call("GET", `/api/projects/${projectId}/geo/runs?pageSize=20`);
       const runs = listRes.data?.data ?? [];
       const run = runs.find((x: any) => x.id === runId);
       if (run) {
@@ -275,7 +276,7 @@ async function waitForGeoRun(runId: string, timeoutMs = 60_000): Promise<{ statu
   while (Date.now() - t0 < timeoutMs) {
     await new Promise(r => setTimeout(r, 3000));
     // 列出最近 runs 找我们的 runId
-    const r = await call("GET", `/api/projects/${PROJECT_ID}/geo/runs?pageSize=20`);
+    const r = await call("GET", `/api/projects/${projectId}/geo/runs?pageSize=20`);
     const runs: any[] = r.data?.data ?? [];
     const run = runs.find(x => x.id === runId);
     if (!run) continue;
@@ -292,7 +293,7 @@ async function waitForGeoRun(runId: string, timeoutMs = 60_000): Promise<{ statu
 
 async function generateWeeklyReport(): Promise<{ reportId: string }> {
   step("📊", "9/10 生成周报");
-  const r = await call("POST", `/api/projects/${PROJECT_ID}/reports`, { type: "WEEKLY", fromDays: 7 });
+  const r = await call("POST", `/api/projects/${projectId}/reports`, { type: "WEEKLY", fromDays: 7 });
   if (r.status !== 201 && r.status !== 200) throw new Error(`report failed: ${r.text}`);
   const reportId = r.data?.data?.id ?? r.data?.id;
   ok(`report_id = ${reportId}`);
@@ -313,7 +314,6 @@ async function readReport(reportId: string): Promise<{ lines: number; firstLines
 async function main() {
   const t0 = Date.now();
   console.log(`\n🔥 GEO-SEO 端到端工作流 → ${BASE}`);
-  console.log(`   project = ${PROJECT_ID}`);
   console.log(`   started at ${new Date().toISOString()}\n`);
 
   // 0. 健康检查
@@ -326,11 +326,19 @@ async function main() {
   // 1. 登录
   await login();
 
+  if (!projectId) {
+    const projectsResponse = await call("GET", "/api/projects?pageSize=100");
+    const projects = projectsResponse.data?.data ?? [];
+    projectId = projects[0]?.id ?? "";
+  }
+  if (!projectId) throw new Error("no accessible project found");
+  info(`project = ${projectId}`);
+
   // 2. 找低分页面 / 项目根
   step("📄", "2/10 找 SEO 均分最低页面");
   let lowestPage = await pickLowestScorePage();
   if (!lowestPage) {
-    const proj = await call("GET", `/api/projects/${PROJECT_ID}`);
+    const proj = await call("GET", `/api/projects/${projectId}`);
     const domain = proj.data?.data?.domain ?? "example.com";
     lowestPage = {
       pageId: "n/a",
@@ -434,8 +442,8 @@ async function main() {
 
   console.log("💡 Next steps:");
   console.log(`   • 查看周报:    ${BASE}/reports`);
-  console.log(`   • 查看 GEO:    ${BASE}/geo/runs?projectId=${PROJECT_ID}`);
-  console.log(`   • 查看分发:    ${BASE}/content/distribution/history?projectId=${PROJECT_ID}`);
+  console.log(`   • 查看 GEO:    ${BASE}/geo/runs?projectId=${projectId}`);
+  console.log(`   • 查看分发:    ${BASE}/content/distribution/history?projectId=${projectId}`);
   console.log(`   • 仪表盘:      ${BASE}/dashboard`);
 }
 

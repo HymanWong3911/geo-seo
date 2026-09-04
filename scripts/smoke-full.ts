@@ -7,9 +7,10 @@
 // 设计原则: 不阻塞, 超时即失败但记录状态
 
 const BASE = process.env.SMOKE_BASE_URL ?? "http://localhost:3010";
-const EMAIL = "admin@example.com";
-const PASSWORD = "Admin@2026";
-const PROJECT_ID = process.env.SMOKE_PROJECT_ID ?? "cmrslxs5w000bgs2pexxt85au";
+const EMAIL = process.env.SMOKE_EMAIL ?? process.env.SEED_ADMIN_EMAIL ?? "";
+const PASSWORD = process.env.SMOKE_PASSWORD ?? process.env.SEED_ADMIN_PASSWORD ?? "";
+if (!EMAIL || !PASSWORD) throw new Error("请配置 SMOKE_EMAIL / SMOKE_PASSWORD");
+let projectId = process.env.SMOKE_PROJECT_ID ?? "";
 const GEO_TIMEOUT_S = parseInt(process.env.SMOKE_GEO_TIMEOUT_S ?? "600"); // 10 分钟 default
 const DRAFT_TIMEOUT_S = 300_000; // 5 分钟,内容草稿生成(LLM 调用)单独上限
 
@@ -106,6 +107,7 @@ async function main() {
     const { status, body } = await call("/api/projects", authOpts);
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const list = body.data ?? body;
+    if (!projectId && Array.isArray(list)) projectId = list[0]?.id ?? "";
     return { ok: Array.isArray(list) && list.length > 0, detail: `${list.length} 个项目` };
   });
 
@@ -118,14 +120,14 @@ async function main() {
   });
 
   await check("5.GEO runs 列表", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/geo/runs`, authOpts);
+    const { status, body } = await call(`/api/projects/${projectId}/geo/runs`, authOpts);
     if (status !== 200) return { ok: false, detail: `HTTP ${status}` };
     const runs = body.data ?? body;
     return { ok: Array.isArray(runs), detail: `${runs.length} 个 runs` };
   });
 
   await check("6.触发 GEO run", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/geo/runs`, {
+    const { status, body } = await call(`/api/projects/${projectId}/geo/runs`, {
       ...authOpts, method: "POST", body: { sync: false },
     });
     if (status === 200 || status === 201) {
@@ -141,7 +143,7 @@ async function main() {
     let lastId = "";
     let resultCount = 0;
     while (Date.now() - start < GEO_TIMEOUT_S * 1000) {
-      const r = await call(`/api/projects/${PROJECT_ID}/geo/runs?pageSize=1`, authOpts);
+      const r = await call(`/api/projects/${projectId}/geo/runs?pageSize=1`, authOpts);
       if (r.status === 200) {
         const list = r.body.data ?? r.body;
         const latest = Array.isArray(list) ? list[0] : list?.items?.[0];
@@ -168,7 +170,7 @@ async function main() {
   });
 
   await check("8.品牌监控扫描", async () => {
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/brand-monitor/refresh`, {
+    const { status, body } = await call(`/api/projects/${projectId}/brand-monitor/refresh`, {
       ...authOpts, method: "POST",
     });
     if (status === 200 || status === 201 || status === 202) {
@@ -179,10 +181,10 @@ async function main() {
   });
 
   await check("9.内容草稿生成", async () => {
-    const kwRes = await call(`/api/projects/${PROJECT_ID}/keywords`, authOpts);
+    const kwRes = await call(`/api/projects/${projectId}/keywords`, authOpts);
     const kw = (kwRes.body.data ?? kwRes.body)[0];
     if (!kw) return { ok: false, detail: "无关键词" };
-    const { status, body } = await call(`/api/projects/${PROJECT_ID}/drafts/generate`, {
+    const { status, body } = await call(`/api/projects/${projectId}/drafts/generate`, {
       ...authOpts, method: "POST", timeout: DRAFT_TIMEOUT_S,
       body: { topic: kw.text, targetKeywords: [kw.text], length: 500 },
     });
@@ -193,13 +195,13 @@ async function main() {
   });
 
   await check("10.系统仪表盘", async () => {
-    const r = await call(`/api/dashboard/summary?projectId=${PROJECT_ID}`, authOpts);
+    const r = await call(`/api/dashboard/summary?projectId=${projectId}`, authOpts);
     if (r.status !== 200) return { ok: false, detail: `HTTP ${r.status}` };
     return { ok: true, detail: `keys: ${Object.keys(r.body.data ?? r.body).slice(0,3).join(",")}` };
   });
 
   await check("11.项目健康评分", async () => {
-    const r = await call(`/api/projects/${PROJECT_ID}/health`, authOpts);
+    const r = await call(`/api/projects/${projectId}/health`, authOpts);
     if (r.status !== 200) return { ok: false, detail: `HTTP ${r.status}` };
     const data = r.body.data ?? r.body;
     return { ok: true, detail: `score=${data.totalScore ?? "?"} level=${data.level ?? "?"}` };

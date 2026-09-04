@@ -1,6 +1,8 @@
 # GEO + SEO 项目开发进度
 
 > **最后更新**：2026-06-11
+> **历史会话记录，不作为当前完成度来源。** 当前可部署状态、验证结果和运行方式统一以 `README.md` 与 `docs/deploy.md` 为准。
+>
 > **本会话累计**：M1-M11 全部完成 + 全量 UI 升级（深空黑+玫瑰金科幻风、主题切换、骨架屏、趋势图表）
 
 ---
@@ -96,7 +98,7 @@
 ### 凭据
 ```
 ADMIN 邮箱: admin@example.com
-ADMIN 密码: Admin@2026
+ADMIN 密码: 由 `SEED_ADMIN_PASSWORD` 显式配置（仓库不保存）
 LLM 端点:  https://api.minimaxi.com/v1  (MiniMax M3)
 LLM Key:   sk-cp-NXCaCjLXYpl_zSJUvAij8hM-yeI-...
 ```
@@ -134,7 +136,7 @@ pnpm typecheck                   # 0 错误
 
 ### 端到端验证（人工）
 1. 浏览器打开 http://localhost:3010
-2. 登录 `admin@example.com` / `Admin@2026`
+2. 使用部署者配置的 `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` 登录
 3. 顶部选"示例项目（公司主站）"
 4. `/audits/new` 填 `https://example.com` → 立即看到 8 项 SEO 发现 + 24 分
 5. `/content?projectId=seed-project-1` → "新草稿" → 填主题 → 看到 AI 生成的 1.5K 字
@@ -279,7 +281,7 @@ pnpm worker       # 终端 2
 
 # 5. 浏览器
 open http://localhost:3010
-# 登录 admin@example.com / Admin@2026
+# 使用 .env 中显式配置的管理员账号登录
 ```
 
 如果遇到 LLM 调用失败：
@@ -489,4 +491,3 @@ open http://localhost:3010
 - **交互反馈**：增强 hover 效果、拖拽提示、进度环
 - **视觉层次**：渐变边框、分组分隔线、金色点缀
 - **组件系统**：StatCard、QuickAction、MiniChart、ScoreRing
-
