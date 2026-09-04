@@ -74,6 +74,7 @@ export async function POST(
         metaTitle: draft.metaTitle,
         metaDescription: draft.metaDescription,
         changeNote: `AI 改写：应用 ${result.appliedFindingCodes.length} 项`,
+        provenance: result.provenance,
         createdById: session.user.id,
       },
     });
@@ -83,6 +84,8 @@ export async function POST(
       where: { id: draft.id },
       data: {
         content: result.rewritten,
+        sourceType: "AI_REWRITTEN",
+        provenance: result.provenance,
       },
     });
 
@@ -90,7 +93,11 @@ export async function POST(
       userId: session.user.id,
       targetType: "ContentDraft",
       targetId: draft.id,
-      metadata: { action: "ai-rewrite", appliedCodes: result.appliedFindingCodes },
+      metadata: {
+        action: "ai-rewrite",
+        appliedCodes: result.appliedFindingCodes,
+        provenance: result.provenance,
+      },
     });
 
     return success({

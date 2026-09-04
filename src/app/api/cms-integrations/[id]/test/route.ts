@@ -1,8 +1,9 @@
 // 测试 CMS 集成连接。
 import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/api/auth";
-import { cmsAdapter } from "@/lib/cms";
-import { handleError, success } from "@/lib/api/response";
+import { prisma } from "@/lib/db";
+import { adapterForIntegration } from "@/lib/cms/integration";
+import { Errors, handleError, success } from "@/lib/api/response";
 
 export async function POST(
   _req: NextRequest,
@@ -10,13 +11,15 @@ export async function POST(
 ) {
   try {
     await requireAdmin();
+    const integration = await prisma.cmsIntegration.findUnique({ where: { id: params.id } });
+    if (!integration) throw Errors.notFound("CMS 集成");
 
-    // 简单测试：尝试列出 categories
-    const categories = await cmsAdapter.listCategories();
+    const adapter = adapterForIntegration(integration);
+    const categories = await adapter.listCategories();
 
     return success({
       ok: true,
-      adapter: cmsAdapter.name,
+      adapter: adapter.name,
       categoriesCount: categories.length,
     });
   } catch (err) {

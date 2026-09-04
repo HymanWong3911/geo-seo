@@ -1,7 +1,7 @@
 // 单个评论删除。
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireProjectMember, requireSession, resolveTargetProjectId } from "@/lib/api/auth";
 import { audit } from "@/lib/audit/logger";
 import { Errors, handleError, success } from "@/lib/api/response";
 
@@ -13,6 +13,9 @@ export async function DELETE(
     const session = await requireSession();
     const comment = await prisma.comment.findUnique({ where: { id: params.id } });
     if (!comment) throw Errors.notFound("评论");
+
+    const projectId = await resolveTargetProjectId(comment.targetType, comment.targetId);
+    await requireProjectMember(session.user.id, session.user.role, projectId);
 
     if (comment.authorId !== session.user.id && session.user.role !== "ADMIN") {
       throw Errors.forbidden("只能删除自己的评论");

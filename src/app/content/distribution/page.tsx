@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProjectSelector } from "@/components/forms/ProjectSelector";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -60,14 +60,14 @@ export default function DistributionPage() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; message: string; durationMs?: number }>>({});
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!projectId) { setTargets([]); return; }
     setLoading(true);
     const res = await fetch(`/api/projects/${projectId}/distribution-targets?includeStats=true`);
     const json = await res.json();
     setTargets(json.data ?? []);
     setLoading(false);
-  }
+  }, [projectId]);
 
   async function testConnection(target: DistributionTarget) {
     setTestingId(target.id);
@@ -93,7 +93,7 @@ export default function DistributionPage() {
     }
   }
 
-  useEffect(() => { void load(); }, [projectId]);
+  useEffect(() => { void load(); }, [load]);
 
   const filteredTargets = activeTab === "all" 
     ? targets 

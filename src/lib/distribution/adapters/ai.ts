@@ -1,5 +1,6 @@
 // AI 智能体分发适配器
 import type { DistributionAdapter, DistributionInput, DistributionResult } from "./base";
+import { outboundFetch } from "@/lib/http/outbound";
 
 // 字节扣子 (Coze) 适配器
 export class CozeAdapter implements DistributionAdapter {
@@ -21,7 +22,7 @@ export class CozeAdapter implements DistributionAdapter {
 
     try {
       // Coze API - 创建知识库文档或发布到 bot
-      const res = await fetch("https://api.coze.cn/v1/documents/create", {
+      const res = await outboundFetch("https://api.coze.cn/v1/documents/create", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -70,7 +71,7 @@ export class BaiduWenxinAdapter implements DistributionAdapter {
 
     try {
       // 1. 获取 access token
-      const tokenRes = await fetch(
+      const tokenRes = await outboundFetch(
         `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${apiKey}&client_secret=${secretKey}`,
         { method: "POST" }
       );
@@ -81,7 +82,7 @@ export class BaiduWenxinAdapter implements DistributionAdapter {
       if (!tokenJson.access_token) return { success: false, error: "获取 access_token 失败" };
 
       // 2. 上传文档到知识库
-      const uploadRes = await fetch(`https://aip.baidubce.com/rpc/2.0/ai_custom/v1/knowledge/${config.agentId}/doc/upload`, {
+      const uploadRes = await outboundFetch(`https://aip.baidubce.com/rpc/2.0/ai_custom/v1/knowledge/${config.agentId}/doc/upload`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -123,7 +124,7 @@ export class TencentYuanbaoAdapter implements DistributionAdapter {
 
     try {
       // 腾讯元宝 API（通过腾讯云代理）
-      const res = await fetch("https://yuanbao.tencent.com/api/v1/content/publish", {
+      const res = await outboundFetch("https://yuanbao.tencent.com/api/v1/content/publish", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -173,7 +174,7 @@ export class DingtalkAdapter implements DistributionAdapter {
 
     try {
       // 1. 获取 access_token
-      const tokenRes = await fetch("https://api.dingtalk.com/v1/oauth2/accessToken", {
+      const tokenRes = await outboundFetch("https://api.dingtalk.com/v1/oauth2/accessToken", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appKey: clientId, appSecret: clientSecret }),
@@ -188,7 +189,7 @@ export class DingtalkAdapter implements DistributionAdapter {
 
       // 2. 发送消息
       if (chatId) {
-        const msgRes = await fetch("https://api.dingtalk.com/v1.0/im/messages", {
+        const msgRes = await outboundFetch("https://api.dingtalk.com/v1.0/im/messages", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

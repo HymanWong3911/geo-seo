@@ -7,18 +7,29 @@ import { distributeToTarget } from "@/lib/distribution";
 import { getAdapter } from "@/lib/distribution/adapters";
 import type { DistributionJob } from "@/lib/queue/distribution";
 
-export const distributionWorker = new Worker<DistributionJob>(
-  "distribution",
-  async (job: Job<DistributionJob>) => {
-    const { draftId, targetId } = job.data;
-    const result = await distributeToTarget({ draftId, targetId });
-    return result;
-  },
-  {
-    connection,
-    concurrency: 5,
-  },
-);
+export async function processDistributionJob(job: Job<DistributionJob>) {
+  const { draftId, targetId } = job.data;
+  const result = await distributeToTarget({
+    draftId,
+    targetId,
+    attempt: job.attemptsMade + 1,
+  });
+  if (!result.success) {
+    throw new Error(result.error ?? "分发失败");
+  }
+  return result;
+}
+
+export function createDistributionWorker() {
+  return new Worker<DistributionJob>(
+    "distribution",
+    processDistributionJob,
+    {
+      connection,
+      concurrency: 5,
+    },
+  );
+}
 
 // 校验目标配置（API 用）
 export async function validateTargetConfig(targetId: string) {

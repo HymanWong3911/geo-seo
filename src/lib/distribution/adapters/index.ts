@@ -1,6 +1,8 @@
 // 分发适配器注册表
 import type { DistributionAdapter } from "./base";
 import type { DistributionPlatform } from "../platforms";
+import { outboundFetch, parseHostAllowlist } from "@/lib/http/outbound";
+import { createHmac } from "node:crypto";
 
 import { ZhihuAdapter } from "./zhihu";
 import { WeChatAdapter } from "./wechat";
@@ -26,7 +28,7 @@ const adapters: Partial<Record<DistributionPlatform, DistributionAdapter>> = {
       if (!apiKey || !databaseId) return { success: false, error: "Notion apiKey/databaseId 未配置" };
 
       try {
-        const res = await fetch("https://api.notion.com/v1/pages", {
+        const res = await outboundFetch("https://api.notion.com/v1/pages", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${apiKey}`,
@@ -72,7 +74,7 @@ const adapters: Partial<Record<DistributionPlatform, DistributionAdapter>> = {
 
       try {
         // 1. 获取 tenant_access_token
-        const tokenRes = await fetch("https://open.feishu.cn/open-apis/auth/v3/tenantAccessToken/internal", {
+        const tokenRes = await outboundFetch("https://open.feishu.cn/open-apis/auth/v3/tenantAccessToken/internal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ app_id: appId, app_secret: appSecret }),
@@ -85,7 +87,7 @@ const adapters: Partial<Record<DistributionPlatform, DistributionAdapter>> = {
         const token = tokenJson.tenantAccessToken;
 
         // 2. 创建文档
-        const docRes = await fetch("https://open.feishu.cn/open-apis/docx/v1/documents", {
+        const docRes = await outboundFetch("https://open.feishu.cn/open-apis/docx/v1/documents", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -122,21 +124,31 @@ const adapters: Partial<Record<DistributionPlatform, DistributionAdapter>> = {
 
       try {
         const headers: Record<string, string> = { "Content-Type": "application/json" };
+        const timestamp = Date.now();
+        const body = JSON.stringify({
+          title: input.title,
+          content: input.content,
+          excerpt: input.excerpt,
+          url: input.url,
+          timestamp,
+        });
         if (config.secret) {
-          // 可添加签名验证
-          headers["X-Signature"] = `sha256=${config.secret}`;
+          headers["X-Timestamp"] = String(timestamp);
+          headers["X-Signature"] = `sha256=${createHmac("sha256", String(config.secret))
+            .update(`${timestamp}.${body}`)
+            .digest("hex")}`;
         }
 
-        const res = await fetch(url, {
+        const res = await outboundFetch(url, {
           method: "POST",
           headers,
-          body: JSON.stringify({
-            title: input.title,
-            content: input.content,
-            excerpt: input.excerpt,
-            url: input.url,
-            timestamp: Date.now(),
-          }),
+          body,
+        }, {
+          validateUrl: true,
+          allowHttp: process.env.DISTRIBUTION_WEBHOOK_ALLOW_HTTP === "true",
+          allowPrivate: process.env.DISTRIBUTION_WEBHOOK_ALLOW_PRIVATE_HOSTS === "true",
+          allowedHosts: parseHostAllowlist(process.env.DISTRIBUTION_WEBHOOK_ALLOWLIST),
+          maxRedirects: 0,
         });
 
         if (!res.ok) return { success: false, error: `Webhook ${res.status}` };

@@ -10,21 +10,26 @@ export interface DistributionJob {
   triggerType: "AUTO_APPROVED" | "MANUAL" | "RETRY";
 }
 
-export const distributionQueue = new Queue<DistributionJob>("distribution", {
-  connection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: "exponential", delay: 10_000 },
-    removeOnComplete: { age: 30 * 24 * 3600, count: 1000 },
-    removeOnFail: { age: 60 * 24 * 3600 },
-  },
-});
+let queue: Queue<DistributionJob> | undefined;
+
+function getDistributionQueue() {
+  queue ??= new Queue<DistributionJob>("distribution", {
+    connection,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 10_000 },
+      removeOnComplete: { age: 30 * 24 * 3600, count: 1000 },
+      removeOnFail: { age: 60 * 24 * 3600 },
+    },
+  });
+  return queue;
+}
 
 export async function enqueueDistribution(job: DistributionJob) {
   // BullMQ jobId 不能包含 :
   const safeDraftId = job.draftId.replace(/:/g, "_");
   const safeTargetId = job.targetId.replace(/:/g, "_");
-  return distributionQueue.add("distribute", job, {
+  return getDistributionQueue().add("distribute", job, {
     jobId: `dist-${safeDraftId}-${safeTargetId}-${Date.now()}`,
   });
 }

@@ -3,6 +3,7 @@
 // 等开发同事按规格实现后端 7 个端点，本适配器直接对接。
 
 import type { ArticleInput, ArticleResult, CmsAdapter, MediaResult, Category, Tag } from "../index";
+import { outboundFetch, parseHostAllowlist } from "@/lib/http/outbound";
 
 const ENDPOINTS = {
   articles: "/api/cms/articles",
@@ -14,24 +15,23 @@ const ENDPOINTS = {
 
 export class SelfHostedCmsAdapter implements CmsAdapter {
   name = "self-hosted";
+  private readonly baseUrl: string;
+  private readonly apiKey: string;
 
-  private get baseUrl() {
-    return process.env.CMS_BASE_URL ?? "http://localhost:8080";
-  }
-
-  private get apiKey() {
-    return process.env.CMS_API_KEY ?? "";
+  constructor(options: { baseUrl: string; apiKey: string }) {
+    this.baseUrl = options.baseUrl.replace(/\/+$/, "");
+    this.apiKey = options.apiKey;
   }
 
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
+    const res = await outboundFetch(`${this.baseUrl}${path}`, {
       ...init,
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
         ...(init?.headers ?? {}),
       },
-    });
+    }, this.outboundPolicy());
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`CMS ${res.status}: ${text}`);
@@ -71,14 +71,14 @@ export class SelfHostedCmsAdapter implements CmsAdapter {
     const formData = new FormData();
     const blob = new Blob([new Uint8Array(file)]);
     formData.append("file", blob, filename);
-    const res = await fetch(`${this.baseUrl}${ENDPOINTS.media}`, {
+    const res = await outboundFetch(`${this.baseUrl}${ENDPOINTS.media}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         // 不设置 Content-Type，浏览器自动加 multipart 边界
       },
       body: formData,
-    });
+    }, this.outboundPolicy());
     if (!res.ok) throw new Error(`CMS media ${res.status}`);
     const json = (await res.json()) as { data: MediaResult };
     return json.data;
@@ -90,5 +90,15 @@ export class SelfHostedCmsAdapter implements CmsAdapter {
 
   async listTags(): Promise<Tag[]> {
     return this.request<Tag[]>(ENDPOINTS.tags);
+  }
+
+  private outboundPolicy() {
+    return {
+      validateUrl: true,
+      allowHttp: process.env.CMS_ALLOW_HTTP === "true",
+      allowPrivate: process.env.CMS_ALLOW_PRIVATE_HOSTS === "true",
+      allowedHosts: parseHostAllowlist(process.env.CMS_EGRESS_ALLOWLIST),
+      maxRedirects: 0,
+    } as const;
   }
 }

@@ -1,5 +1,6 @@
 // 微信公众号分发适配器
 import type { DistributionAdapter, DistributionInput, DistributionResult } from "./base";
+import { outboundFetch } from "@/lib/http/outbound";
 
 export class WeChatAdapter implements DistributionAdapter {
   readonly platform = "WECHAT_MP";
@@ -19,7 +20,7 @@ export class WeChatAdapter implements DistributionAdapter {
 
     try {
       // 1. 获取 access_token
-      const tokenRes = await fetch(
+      const tokenRes = await outboundFetch(
         `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`,
       );
       if (!tokenRes.ok) return { success: false, error: `获取 access_token 失败: ${tokenRes.status}` };
@@ -35,7 +36,7 @@ export class WeChatAdapter implements DistributionAdapter {
       // 实际实现需要先上传图片获取 media_id
 
       // 3. 创建草稿
-      const draftRes = await fetch(`https://api.weixin.qq.com/cgi-bin/draft/add?access_token=${accessToken}`, {
+      const draftRes = await outboundFetch(`https://api.weixin.qq.com/cgi-bin/draft/add?access_token=${accessToken}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

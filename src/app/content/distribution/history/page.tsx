@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProjectSelector } from "@/components/forms/ProjectSelector";
 import { SkeletonTable } from "@/components/ui/Skeleton";
@@ -95,7 +95,7 @@ export default function DistributionHistoryPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>("all");
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
-  async function load(silent = false) {
+  const load = useCallback(async (silent = false) => {
     if (!projectId) { setLogs([]); setTargets([]); setLoading(false); return; }
     if (silent) setRefreshing(true); else setLoading(true);
     try {
@@ -111,9 +111,9 @@ export default function DistributionHistoryPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, [projectId]);
 
-  useEffect(() => { void load(); }, [projectId]);
+  useEffect(() => { void load(); }, [load]);
 
   const rangedLogs = useMemo(() => {
     const cutoff = timeRangeCutoff(timeRange);

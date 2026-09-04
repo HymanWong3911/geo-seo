@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ProjectSelector } from "@/components/forms/ProjectSelector";
@@ -12,6 +12,7 @@ interface Draft {
   title: string;
   status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "PUBLISHED" | "ARCHIVED";
   sourceType: string;
+  provenance: { kind?: string; provider?: string; synthetic?: boolean } | null;
   excerpt: string | null;
   authorId: string;
   updatedAt: string;
@@ -39,9 +40,9 @@ const STATUS_LABEL: Record<string, string> = {
 
 const SOURCE_LABELS: Record<string, string> = {
   AI_GENERATED: "🤖 AI 生成",
+  AI_REWRITTEN: "✨ AI 改写",
   MANUAL: "✍️ 手动",
-  CONTENT_AUDIT: "📋 诊断改写",
-  SEO_RECOMMENDATION: "🔍 SEO 建议",
+  IMPORTED: "📥 导入",
 };
 
 const STATUS_DONUT_COLORS: Record<string, string> = {
@@ -63,7 +64,7 @@ export default function DraftsListPage() {
   const [sourceFilter, setSourceFilter] = useState<string>("");
   const [searchQ, setSearchQ] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!projectId) { setDrafts([]); return; }
     setLoading(true);
     const url = new URL(`/api/projects/${projectId}/drafts`, window.location.origin);
@@ -72,12 +73,11 @@ export default function DraftsListPage() {
     const json = await res.json();
     setDrafts(json.data ?? []);
     setLoading(false);
-  }
+  }, [projectId, statusFilter]);
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, statusFilter]);
+  }, [load]);
 
   // 过滤
   const filtered = useMemo(() => drafts.filter(d => {
@@ -295,6 +295,11 @@ export default function DraftsListPage() {
                       <span className="text-[10px] font-mono text-muted-foreground">
                         {SOURCE_LABELS[d.sourceType] ?? d.sourceType} · v{d._count.revisions}
                       </span>
+                      {d.provenance?.synthetic && (
+                        <span className="badge border border-warning/40 bg-warning/10 text-[10px] text-warning">
+                          {d.provenance.kind === "template-fallback" ? "模板兜底" : "Mock 测试"}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="mt-2 text-[10px] font-mono text-muted-foreground">

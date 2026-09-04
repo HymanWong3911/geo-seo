@@ -9,6 +9,7 @@ interface CmsIntegration {
   type: string;
   baseUrl: string;
   active: boolean;
+  credentialConfigured: boolean;
   createdAt: string;
   project: { id: string; name: string };
 }
@@ -59,11 +60,7 @@ export default function CmsIntegrationsPage() {
       </div>
 
       <div className="rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm">
-        <strong>当前适配器：</strong> {process.env.NEXT_PUBLIC_CMS_ADAPTER ?? "mock（自动）"}
-        <br />
-        <span className="text-xs text-muted-foreground">
-          自建网站 CMS 端点（21.7 节 7 个端点）实现后，移除 env <code>CMS_MOCK=true</code> 并配置 <code>CMS_BASE_URL</code> + <code>CMS_API_KEY</code> 即可切到真实 CMS。
-        </span>
+        每个集成独立保存 URL 与加密凭据；发布任务会按草稿所属项目选择对应适配器。
       </div>
 
       <div className="rounded-md border border-border">
@@ -92,6 +89,7 @@ export default function CmsIntegrationsPage() {
                   <td className="px-3 py-2 text-xs text-muted-foreground">{c.baseUrl}</td>
                   <td className="px-3 py-2 text-xs">
                     {c.active ? <span className="text-green-600">启用</span> : <span className="text-muted-foreground">停用</span>}
+                    {!c.credentialConfigured && <span className="ml-2 text-red-600">需重设密钥</span>}
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
@@ -183,6 +181,17 @@ function AddIntegrationDialog({ onClose, onAdded }: { onClose: () => void; onAdd
           />
         </div>
         <div>
+          <label className="mb-1 block text-sm font-medium">类型 *</label>
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="self-hosted">自建 CMS</option>
+            <option value="mock">Mock（开发验证）</option>
+          </select>
+        </div>
+        <div>
           <label className="mb-1 block text-sm font-medium">Base URL *</label>
           <input
             type="url"
@@ -201,7 +210,7 @@ function AddIntegrationDialog({ onClose, onAdded }: { onClose: () => void; onAdd
             minLength={8}
             value={form.apiKey}
             onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-            placeholder="32 字节随机字符串（存哈希，不存明文）"
+            placeholder="至少 8 位（AES-256-GCM 加密存储）"
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-mono"
           />
         </div>

@@ -1,5 +1,6 @@
 // 内容平台分发适配器
 import type { DistributionAdapter, DistributionInput, DistributionResult } from "./base";
+import { outboundFetch } from "@/lib/http/outbound";
 
 // 百家号适配器
 export class BaijiahaoAdapter implements DistributionAdapter {
@@ -20,7 +21,7 @@ export class BaijiahaoAdapter implements DistributionAdapter {
 
     try {
       // 百家号开放平台 API
-      const res = await fetch("https://baijiahao.baidu.com/v1/content/article/publish", {
+      const res = await outboundFetch("https://baijiahao.baidu.com/v1/content/article/publish", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -72,7 +73,7 @@ export class DouyinAdapter implements DistributionAdapter {
 
     try {
       // 1. 获取 access_token
-      const tokenRes = await fetch("https://open.toutiao.com/oauth/access_token/", {
+      const tokenRes = await outboundFetch("https://open.toutiao.com/oauth/access_token/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -90,7 +91,7 @@ export class DouyinAdapter implements DistributionAdapter {
       const accessToken = tokenJson.data.access_token;
 
       // 2. 上传文章
-      const res = await fetch("https://open.toutiao.com/article/publish", {
+      const res = await outboundFetch("https://open.toutiao.com/article/publish", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

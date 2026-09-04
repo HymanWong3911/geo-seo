@@ -56,8 +56,14 @@ export interface CmsAdapter {
 import { SelfHostedCmsAdapter } from "./adapters/self-hosted";
 import { MockCmsAdapter } from "./adapters/mock";
 
-const mock = process.env.CMS_MOCK === "true" || !process.env.CMS_BASE_URL;
-
-export const cmsAdapter: CmsAdapter = mock
-  ? new MockCmsAdapter()
-  : new SelfHostedCmsAdapter();
+export function createCmsAdapter(input: {
+  type: string;
+  baseUrl: string;
+  apiKey: string;
+}): CmsAdapter {
+  if (input.type === "mock") return new MockCmsAdapter();
+  if (input.type === "self-hosted") {
+    return new SelfHostedCmsAdapter({ baseUrl: input.baseUrl, apiKey: input.apiKey });
+  }
+  throw new Error(`不支持的 CMS 类型: ${input.type}`);
+}

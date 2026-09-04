@@ -23,6 +23,12 @@ interface Draft {
   metaDescription: string | null;
   status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "PUBLISHED" | "ARCHIVED";
   sourceType: string;
+  provenance: {
+    kind?: string;
+    provider?: string;
+    synthetic?: boolean;
+    reason?: string;
+  } | null;
   targetUrl: string | null;
   targetKeywords: string[];
   authorId: string;
@@ -39,6 +45,13 @@ interface Revision {
   changeNote: string | null;
   createdById: string;
   createdAt: string;
+}
+
+interface CmsIntegrationOption {
+  id: string;
+  name: string;
+  active: boolean;
+  credentialConfigured: boolean;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -156,13 +169,17 @@ export default function DraftEditPage() {
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [reviewComments, setReviewComments] = useState("");
+  const [cmsIntegrations, setCmsIntegrations] = useState<CmsIntegrationOption[]>([]);
+  const [selectedIntegrationId, setSelectedIntegrationId] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState("");
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     const [d, r] = await Promise.all([
       fetch(`/api/drafts/${params.id}`).then((r) => r.json()),
@@ -174,15 +191,20 @@ export default function DraftEditPage() {
       setContent(d.data.content);
       setMetaTitle(d.data.metaTitle ?? "");
       setMetaDescription(d.data.metaDescription ?? "");
+      const cms = await fetch(`/api/cms-integrations?projectId=${d.data.projectId}`).then((response) => response.json());
+      const available = ((cms.data ?? []) as CmsIntegrationOption[]).filter(
+        (integration) => integration.active && integration.credentialConfigured,
+      );
+      setCmsIntegrations(available);
+      setSelectedIntegrationId((current) => current || available[0]?.id || "");
     }
     setRevisions(r.data ?? []);
     setLoading(false);
-  }
+  }, [params.id]);
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [load]);
 
   const saveDraft = useCallback(async () => {
     if (!draft) return;
@@ -197,7 +219,7 @@ export default function DraftEditPage() {
     }
     setSaving(false);
     void load();
-  }, [draft, title, content, metaTitle, metaDescription]);
+  }, [draft, title, content, metaTitle, metaDescription, load]);
 
   // 自动保存（debounce 1.5s）
   useEffect(() => {
@@ -262,6 +284,24 @@ export default function DraftEditPage() {
     if (res.ok) void load();
   }
 
+  async function publishToCms() {
+    if (!draft || !selectedIntegrationId) return;
+    setPublishing(true);
+    setPublishError("");
+    const res = await fetch(`/api/drafts/${draft.id}/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ integrationId: selectedIntegrationId }),
+    });
+    const json = await res.json();
+    setPublishing(false);
+    if (!res.ok) {
+      setPublishError(json?.error?.message ?? "发布任务创建失败");
+      return;
+    }
+    alert("发布任务已进入队列");
+  }
+
   if (loading || !draft) {
     return (
       <div className="mx-auto max-w-7xl space-y-6">
@@ -320,8 +360,44 @@ export default function DraftEditPage() {
               提交审核
             </button>
           ) : null}
+          {draft.status === "APPROVED" && (
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedIntegrationId}
+                onChange={(event) => setSelectedIntegrationId(event.target.value)}
+                className="input-field min-w-40"
+              >
+                <option value="">选择 CMS</option>
+                {cmsIntegrations.map((integration) => (
+                  <option key={integration.id} value={integration.id}>{integration.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => void publishToCms()}
+                disabled={publishing || !selectedIntegrationId}
+                className="btn-primary disabled:opacity-50"
+              >
+                {publishing ? "入队中..." : "发布到 CMS"}
+              </button>
+            </div>
+          )}
         </div>
       </header>
+
+      {draft.provenance?.synthetic && (
+        <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+          {draft.provenance.kind === "template-fallback"
+            ? "这是 LLM 失败后生成的模板兜底稿，不是模型真实生成内容。"
+            : "这是 mock provider 生成的测试稿，不应直接作为生产内容发布。"}
+          {draft.provenance.provider && ` Provider: ${draft.provenance.provider}`}
+        </div>
+      )}
+
+      {publishError && (
+        <div className="card border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
+          {publishError}
+        </div>
+      )}
 
       {draft.reviewNotes && draft.status === "REJECTED" && (
         <div className="card p-4 border-destructive/50 bg-destructive/5">

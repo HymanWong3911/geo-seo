@@ -2,30 +2,38 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/api/auth";
+import { requireAdmin, requireSession, resolveAccessibleProjectIds } from "@/lib/api/auth";
 import { audit } from "@/lib/audit/logger";
 import { Errors, handleError, success, created } from "@/lib/api/response";
 import { Prisma } from "@prisma/client";
-import crypto from "crypto";
+import { encryptSecret, fingerprintSecret } from "@/lib/security/secrets";
+import { publicCmsIntegration } from "@/lib/cms/integration";
 
 const createSchema = z.object({
   projectId: z.string(),
   name: z.string().min(1).max(100),
-  type: z.string().default("self-hosted"),
+  type: z.enum(["self-hosted", "mock"]).default("self-hosted"),
   baseUrl: z.string().url(),
   apiKey: z.string().min(8, "API Key 至少 8 位"),
   config: z.record(z.string(), z.unknown()).default({}),
   active: z.boolean().default(true),
 });
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireSession();
+    const requestedProjectId = new URL(req.url).searchParams.get("projectId") ?? undefined;
+    const projectIds = await resolveAccessibleProjectIds(
+      session.user.id,
+      session.user.role,
+      requestedProjectId,
+    );
     const integrations = await prisma.cmsIntegration.findMany({
+      where: { projectId: { in: projectIds } },
       orderBy: { createdAt: "desc" },
       include: { project: { select: { id: true, name: true } } },
     });
-    return success(integrations);
+    return success(integrations.map(publicCmsIntegration));
   } catch (err) {
     return handleError(err);
   }
@@ -40,11 +48,13 @@ export async function POST(req: NextRequest) {
       throw Errors.badRequest("参数错误", parsed.error.flatten());
     }
 
-    // 存 API Key 哈希（不存明文）
-    const apiKeyHash = crypto
-      .createHash("sha256")
-      .update(parsed.data.apiKey)
-      .digest("hex");
+    const project = await prisma.project.findUnique({
+      where: { id: parsed.data.projectId },
+      select: { id: true },
+    });
+    if (!project) throw Errors.notFound("项目");
+
+    const secret = encryptSecret(parsed.data.apiKey);
 
     const integration = await prisma.cmsIntegration.create({
       data: {
@@ -52,21 +62,23 @@ export async function POST(req: NextRequest) {
         name: parsed.data.name,
         type: parsed.data.type,
         baseUrl: parsed.data.baseUrl,
-        apiKeyHash,
+        apiKeyHash: fingerprintSecret(parsed.data.apiKey),
+        apiKeyEncrypted: secret.encrypted,
+        apiKeyIv: secret.iv,
+        apiKeyTag: secret.tag,
         config: parsed.data.config as Prisma.InputJsonValue,
         active: parsed.data.active,
       },
     });
 
-    await audit("ALERT_CHANNEL_UPDATE", {
-      // 复用：v1.1 没 CMS_INTEGRATION_CREATE
+    await audit("SETTINGS_UPDATE", {
       userId: session.user.id,
       targetType: "CmsIntegration",
       targetId: integration.id,
       metadata: { action: "create", name: integration.name, type: integration.type },
     });
 
-    return created(integration);
+    return created(publicCmsIntegration(integration));
   } catch (err) {
     return handleError(err);
   }

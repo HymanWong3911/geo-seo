@@ -6,6 +6,7 @@ import { getAdapter, type DistributionInput, type DistributionResult } from "./a
 interface DistributeOptions {
   draftId: string;
   targetId: string;
+  attempt?: number;
   override?: {
     title?: string;
     content?: string;
@@ -37,7 +38,7 @@ export async function distributeToTarget(options: DistributeOptions): Promise<Di
         draftId: draft.id,
         status: "FAILED",
         errorMessage: `配置缺失: ${validation.missing.join(", ")}`,
-        attempts: 1,
+        attempts: options.attempt ?? 1,
         sentAt: null,
       },
     });
@@ -62,7 +63,7 @@ export async function distributeToTarget(options: DistributeOptions): Promise<Di
       externalId: result.externalId ?? null,
       externalUrl: result.externalUrl ?? null,
       errorMessage: result.error ?? null,
-      attempts: 1,
+      attempts: options.attempt ?? 1,
       sentAt: result.success ? new Date() : null,
     },
   });

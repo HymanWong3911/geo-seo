@@ -1,5 +1,6 @@
 // 知乎分发适配器
 import type { DistributionAdapter, DistributionInput, DistributionResult } from "./base";
+import { outboundFetch } from "@/lib/http/outbound";
 
 export class ZhihuAdapter implements DistributionAdapter {
   readonly platform = "ZHIHU";
@@ -18,7 +19,7 @@ export class ZhihuAdapter implements DistributionAdapter {
     try {
       // 知乎开放平台 API
       // 实际需要先获取用户信息，然后创建文章
-      const res = await fetch("https://api.zhihu.com/articles", {
+      const res = await outboundFetch("https://api.zhihu.com/articles", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

@@ -17,6 +17,13 @@ export async function GET(
     await requireProjectEditor(session.user.id, session.user.role, params.projectId);
 
     if (draftId) {
+      const draft = await prisma.contentDraft.findFirst({
+        where: { id: draftId, projectId: params.projectId },
+        select: { id: true },
+      });
+      if (!draft) {
+        return NextResponse.json({ error: { message: "草稿不存在或不属于当前项目" } }, { status: 404 });
+      }
       // 获取特定草稿的分发历史
       const logs = await getDistributionHistory(draftId);
       return success(logs);

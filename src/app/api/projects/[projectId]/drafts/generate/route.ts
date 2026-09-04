@@ -69,6 +69,7 @@ export async function POST(
         metaDescription: generated.metaDescription,
         sourceType: "AI_GENERATED",
         sourcePrompt: `topic: ${parsed.data.topic}\nkeywords: ${parsed.data.targetKeywords.join(", ")}`,
+        provenance: generated.provenance,
         targetKeywords: parsed.data.targetKeywords,
         authorId: session.user.id,
       },
@@ -85,6 +86,7 @@ export async function POST(
         metaTitle: draft.metaTitle,
         metaDescription: draft.metaDescription,
         changeNote: "AI 生成初始版本",
+        provenance: generated.provenance,
         createdById: session.user.id,
       },
     });
@@ -93,7 +95,12 @@ export async function POST(
       userId: session.user.id,
       targetType: "ContentDraft",
       targetId: draft.id,
-      metadata: { action: "ai-generate", topic: parsed.data.topic, projectId: params.projectId },
+      metadata: {
+        action: "ai-generate",
+        topic: parsed.data.topic,
+        projectId: params.projectId,
+        provenance: generated.provenance,
+      },
     });
 
     return success({ draftId: draft.id, generated });

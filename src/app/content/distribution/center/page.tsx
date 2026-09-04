@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 interface Overview {
@@ -65,17 +65,17 @@ export default function DistributionCenterPage() {
   const [range, setRange] = useState(30);
   const [filter, setFilter] = useState<"all" | "SUCCESS" | "FAILED" | "PENDING">("all");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     const res = await fetch(`/api/distribution/overview?days=${range}`);
     const json = await res.json();
     setData(json.data);
     setLoading(false);
-  }
+  }, [range]);
 
   useEffect(() => {
     void load();
-  }, [range]);
+  }, [load]);
 
   async function retry(logId: string) {
     const res = await fetch(`/api/distribution-logs/${logId}/retry`, { method: "POST" });

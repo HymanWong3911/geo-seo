@@ -1,6 +1,5 @@
 // Mock CMS 适配器。
-// 用于开发环境：开发同事的 21.7 端点还没实现时，可以用 mock 走通完整流程。
-// 用法：env 加 CMS_MOCK=true（默认就是 true 如果没配 CMS_BASE_URL）
+// 用于开发环境：把单个 CmsIntegration 的 type 设为 mock 即可走通完整流程。
 
 import type {
   ArticleInput,

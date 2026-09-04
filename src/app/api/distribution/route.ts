@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/api/auth";
-import { handleError, success } from "@/lib/api/response";
+import { prisma } from "@/lib/db";
+import { requireProjectEditor, requireSession } from "@/lib/api/auth";
+import { Errors, handleError, success } from "@/lib/api/response";
 import { triggerManualDistribution, triggerBatchDistribution, validateTargetConfig } from "@/workers/distributionWorker";
 
 export async function POST(req: NextRequest) {
@@ -13,12 +14,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: { message: "缺少 draftId" } }, { status: 400 });
     }
 
+    const draft = await prisma.contentDraft.findUnique({
+      where: { id: draftId },
+      select: { projectId: true },
+    });
+    if (!draft) throw Errors.notFound("草稿");
+    await requireProjectEditor(session.user.id, session.user.role, draft.projectId);
+
     let result;
 
     switch (action) {
       case "batch":
-        if (!targetIds) {
+        if (!Array.isArray(targetIds) || targetIds.length === 0 || !targetIds.every((id) => typeof id === "string")) {
           return NextResponse.json({ error: { message: "缺少 targetIds" } }, { status: 400 });
+        }
+        {
+          const matchedTargets = await prisma.distributionTarget.count({
+            where: { id: { in: targetIds }, projectId: draft.projectId, active: true },
+          });
+          if (matchedTargets !== new Set(targetIds).size) {
+            throw Errors.badRequest("分发目标不存在、已停用或不属于草稿项目");
+          }
         }
         result = await triggerBatchDistribution(draftId, targetIds);
         break;
@@ -26,6 +42,13 @@ export async function POST(req: NextRequest) {
       case "single":
         if (!targetId) {
           return NextResponse.json({ error: { message: "缺少 targetId" } }, { status: 400 });
+        }
+        {
+          const target = await prisma.distributionTarget.findFirst({
+            where: { id: targetId, projectId: draft.projectId, active: true },
+            select: { id: true },
+          });
+          if (!target) throw Errors.badRequest("分发目标不存在、已停用或不属于草稿项目");
         }
         result = await triggerManualDistribution(draftId, targetId);
         break;
@@ -49,6 +72,13 @@ export async function GET(req: NextRequest) {
     if (!targetId) {
       return NextResponse.json({ error: { message: "缺少 targetId" } }, { status: 400 });
     }
+
+    const target = await prisma.distributionTarget.findUnique({
+      where: { id: targetId },
+      select: { projectId: true },
+    });
+    if (!target) throw Errors.notFound("分发目标");
+    await requireProjectEditor(session.user.id, session.user.role, target.projectId);
 
     const result = await validateTargetConfig(targetId);
     return success(result);

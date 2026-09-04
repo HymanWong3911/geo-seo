@@ -1,5 +1,6 @@
 // 搜索引擎 URL 提交适配器
 import type { DistributionAdapter, DistributionInput, DistributionResult } from "./base";
+import { outboundFetch } from "@/lib/http/outbound";
 
 interface SearchEngineAdapter extends DistributionAdapter {
   readonly searchEngine: string;
@@ -27,7 +28,7 @@ export class BaiduSearchAdapter implements SearchEngineAdapter {
 
     try {
       // 百度搜索资源平台主动推送 API
-      const res = await fetch(`https://data.zz.baidu.com/urls?site=${encodeURIComponent(siteUrl)}&token=${token}`, {
+      const res = await outboundFetch(`https://data.zz.baidu.com/urls?site=${encodeURIComponent(siteUrl)}&token=${token}`, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: input.url,
@@ -74,7 +75,7 @@ export class SogouSearchAdapter implements SearchEngineAdapter {
 
     try {
       // 搜狗搜索推送 API
-      const res = await fetch(`https://zhanzhang.sogou.com/站长工具/URL提交/post`, {
+      const res = await outboundFetch(`https://zhanzhang.sogou.com/站长工具/URL提交/post`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -120,7 +121,7 @@ export class So360SearchAdapter implements SearchEngineAdapter {
 
     try {
       // 360 搜索推送 API
-      const res = await fetch(`https://zhanzhang.so.com/api/url/submit?site=${encodeURIComponent(siteUrl)}&token=${token}`, {
+      const res = await outboundFetch(`https://zhanzhang.so.com/api/url/submit?site=${encodeURIComponent(siteUrl)}&token=${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ urls: [input.url] }),
@@ -166,7 +167,7 @@ export class ShenmaSearchAdapter implements SearchEngineAdapter {
 
     try {
       // 神马搜索推送 API（通过神马站长平台）
-      const res = await fetch(`https://zhanzhang.sm.cn/api/push?site=${encodeURIComponent(siteUrl)}&token=${token}`, {
+      const res = await outboundFetch(`https://zhanzhang.sm.cn/api/push?site=${encodeURIComponent(siteUrl)}&token=${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ urls: [input.url] }),

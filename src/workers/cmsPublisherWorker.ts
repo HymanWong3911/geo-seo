@@ -10,17 +10,11 @@ import { Worker } from "bullmq";
 import { connection } from "@/lib/queue";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit/logger";
-import { cmsAdapter, type ArticleResult } from "@/lib/cms";
+import type { ArticleResult, CmsAdapter } from "@/lib/cms";
+import { adapterForIntegration } from "@/lib/cms/integration";
 import { sendAlert } from "@/lib/alert/sender";
 import { JobStatus } from "@prisma/client";
-import type { SchedulerJob } from "@/lib/queue/scheduler";
-
-// 模拟 BullMQ 任务类型（cms-publish 队列）
-export interface CmsPublishJob {
-  draftId: string;
-  integrationId: string;
-  userId: string;
-}
+import type { CmsPublishJob } from "@/lib/queue/cms";
 
 const BACKOFF_MS = [5_000, 30_000, 60_000, 120_000, 240_000];
 
@@ -42,23 +36,49 @@ export async function publishDraft(job: CmsPublishJob): Promise<{
   const integration = await prisma.cmsIntegration.findUnique({ where: { id: integrationId } });
   if (!integration) throw new Error("CMS 集成不存在");
   if (!integration.active) throw new Error("CMS 集成已停用");
+  if (integration.projectId !== draft.projectId) throw new Error("CMS 集成与草稿不属于同一项目");
+  if (draft.status !== "APPROVED") throw new Error("只有审核通过的草稿才能发布");
 
-  // 创建 publishLog（PENDING）
-  const publishLog = await prisma.publishLog.create({
-    data: {
+  const publishLog = await prisma.publishLog.upsert({
+    where: { draftId: draft.id },
+    create: {
       draftId: draft.id,
       cmsIntegrationId: integration.id,
       status: JobStatus.PENDING,
       attempts: 0,
     },
+    update: {
+      cmsIntegrationId: integration.id,
+      status: JobStatus.PENDING,
+      attempts: 0,
+      errorMessage: null,
+      externalId: null,
+      externalUrl: null,
+      publishedAt: null,
+      rolledBackAt: null,
+      rollbackReason: null,
+    },
   });
+
+  let adapter: CmsAdapter;
+  try {
+    adapter = adapterForIntegration(integration);
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    await prisma.publishLog.update({
+      where: { id: publishLog.id },
+      data: { status: "FAILED", errorMessage: error },
+    });
+    return { success: false, publishLogId: publishLog.id, error };
+  }
 
   // 5 次重试
   let lastError: string | undefined;
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
-      const result: ArticleResult = await cmsAdapter.createArticle({
+      const result: ArticleResult = await adapter.createArticle({
         title: draft.title,
+        slug: draft.slug ?? undefined,
         content: draft.content,
         excerpt: draft.excerpt ?? undefined,
         status: "published",
@@ -127,12 +147,16 @@ export async function publishDraft(job: CmsPublishJob): Promise<{
 
 // Rollback：删除已发布的文章
 export async function rollbackPublish(publishLogId: string, reason: string, userId: string): Promise<{ success: boolean; error?: string }> {
-  const log = await prisma.publishLog.findUnique({ where: { id: publishLogId } });
+  const log = await prisma.publishLog.findUnique({
+    where: { id: publishLogId },
+    include: { cmsIntegration: true },
+  });
   if (!log) throw new Error("PublishLog 不存在");
   if (!log.externalId) throw new Error("没有 externalId，无法撤销");
 
   try {
-    await cmsAdapter.deleteArticle(log.externalId);
+    const adapter = adapterForIntegration(log.cmsIntegration);
+    await adapter.deleteArticle(log.externalId);
     await prisma.publishLog.update({
       where: { id: log.id },
       data: { rolledBackAt: new Date(), rollbackReason: reason },
@@ -155,12 +179,10 @@ export async function rollbackPublish(publishLogId: string, reason: string, user
 }
 
 // 简单的 worker 集成（BullMQ 注册到 scheduler 队列）
-export const cmsPublisherWorker = new Worker<SchedulerJob | CmsPublishJob>(
-  "cms-publish",
-  async (job) => {
-    if ("draftId" in job.data && "integrationId" in job.data) {
-      return publishDraft(job.data as CmsPublishJob);
-    }
-  },
-  { connection, concurrency: 2 },
-);
+export function createCmsPublisherWorker() {
+  return new Worker<CmsPublishJob>(
+    "cms-publish",
+    async (job) => publishDraft(job.data),
+    { connection, concurrency: 2 },
+  );
+}
