@@ -98,7 +98,7 @@
 ADMIN 邮箱: admin@example.com
 ADMIN 密码: Admin@2026
 LLM 端点:  https://api.minimaxi.com/v1  (MiniMax M3)
-LLM Key:   sk-cp-NXCaCjLXYpl_zSJUvAij8hM-yeI-...
+LLM Key:   （已从文档移除；仅通过 `LLM_API_KEY` 环境变量注入。旧值已进入 Git 历史，必须轮换。）
 ```
 
 ### 启动命令
@@ -489,4 +489,3 @@ open http://localhost:3010
 - **交互反馈**：增强 hover 效果、拖拽提示、进度环
 - **视觉层次**：渐变边框、分组分隔线、金色点缀
 - **组件系统**：StatCard、QuickAction、MiniChart、ScoreRing
-
