@@ -1,8 +1,8 @@
 // 路由级权限校验。
 // 详细说明见 dev doc v1.2 15.4 节。
 //
-// 中间件运行在 edge runtime，所以**不能** import ioredis 等 Node-only 包。
-// 用 next-auth/jwt 的 getToken() 验证 session（edge 兼容）。
+// NextAuth/Jose 需要完整的 Node.js crypto/compression API；Next 15.5 已稳定
+// 支持 Node.js middleware，因此显式选择 nodejs runtime。
 
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
@@ -59,5 +59,6 @@ export default async function middleware(req: Request) {
 }
 
 export const config = {
+  runtime: "nodejs",
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

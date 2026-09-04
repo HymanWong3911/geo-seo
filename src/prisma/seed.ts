@@ -3,12 +3,17 @@
 // 用法: pnpm prisma:seed
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "admin@example.com";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "Admin@2026";
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const requirePasswordChange = process.env.SEED_REQUIRE_PASSWORD_CHANGE !== "false";
+  if (!adminEmail || !adminPassword || adminPassword.length < 12) {
+    throw new Error("SEED_ADMIN_EMAIL 和至少 12 位的 SEED_ADMIN_PASSWORD 必须显式配置");
+  }
 
   console.log("==> Seeding database (v1.2 完整版)...");
 
@@ -22,14 +27,15 @@ async function main() {
       name: "系统管理员",
       role: "ADMIN",
       passwordHash,
-      mustChangePassword: false,
+      mustChangePassword: requirePasswordChange,
       lastPasswordChangeAt: new Date(),
     },
   });
   console.log(`==> ADMIN: ${admin.email}`);
 
   // 第二个普通用户
-  const memberEmail = "editor@example.com";
+  const memberEmail = process.env.SEED_MEMBER_EMAIL?.trim() || "editor@example.com";
+  const memberPassword = process.env.SEED_MEMBER_PASSWORD || randomBytes(24).toString("base64url");
   const member = await prisma.user.upsert({
     where: { email: memberEmail },
     update: {},
@@ -37,8 +43,8 @@ async function main() {
       email: memberEmail,
       name: "内容编辑",
       role: "MEMBER",
-      passwordHash: await bcrypt.hash("Editor@2026", 10),
-      mustChangePassword: false,
+      passwordHash: await bcrypt.hash(memberPassword, 10),
+      mustChangePassword: requirePasswordChange,
       lastPasswordChangeAt: new Date(),
     },
   });
@@ -613,11 +619,11 @@ async function main() {
   console.log("");
   console.log("  ADMIN 账号:");
   console.log(`    email:    ${adminEmail}`);
-  console.log(`    password: ${adminPassword}`);
+  console.log("    password: 已从环境变量读取（不会输出）");
   console.log("");
   console.log("  EDITOR 账号:");
-  console.log("    email:    editor@example.com");
-  console.log("    password: Editor@2026");
+  console.log(`    email:    ${memberEmail}`);
+  console.log("    password: 已显式配置或随机生成（不会输出）");
   console.log("");
   console.log("  种子数据：");
   console.log(`    项目：     ${projectSeeds.length}`);

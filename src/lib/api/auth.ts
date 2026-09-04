@@ -1,8 +1,10 @@
 // API 鉴权辅助函数。
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Errors, HttpError } from "./response";
+import { Errors } from "./response";
 import type { ProjectRole, UserRole } from "@prisma/client";
+
+const ALL_PROJECT_ROLES: ProjectRole[] = ["OWNER", "EDITOR", "VIEWER"];
 
 export async function requireSession() {
   const session = await auth();
@@ -51,6 +53,10 @@ export async function requireProjectEditor(userId: string, userRole: UserRole, p
   return requireProjectRole(userId, userRole, projectId, ["OWNER", "EDITOR"]);
 }
 
+export async function requireProjectMember(userId: string, userRole: UserRole, projectId: string) {
+  return requireProjectRole(userId, userRole, projectId, ALL_PROJECT_ROLES);
+}
+
 export async function listUserProjectIds(userId: string, userRole: UserRole): Promise<string[]> {
   if (userRole === "ADMIN") {
     const all = await prisma.project.findMany({
@@ -64,4 +70,74 @@ export async function listUserProjectIds(userId: string, userRole: UserRole): Pr
     select: { projectId: true },
   });
   return memberships.map((m) => m.projectId);
+}
+
+/**
+ * Resolve the project scope for cross-project endpoints.
+ * A requested project must be explicitly accessible; without one, callers are
+ * constrained to the projects returned by listUserProjectIds().
+ */
+export async function resolveAccessibleProjectIds(
+  userId: string,
+  userRole: UserRole,
+  requestedProjectId?: string,
+): Promise<string[]> {
+  if (requestedProjectId) {
+    await requireProjectMember(userId, userRole, requestedProjectId);
+    return [requestedProjectId];
+  }
+  return listUserProjectIds(userId, userRole);
+}
+
+export type ProjectScopedTargetType =
+  | "Task"
+  | "Optimization"
+  | "ContentDraft"
+  | "PageAudit"
+  | "GeoRun"
+  | "Project";
+
+/** Resolve collaboration target IDs to their owning project before reading or writing. */
+export async function resolveTargetProjectId(
+  targetType: string,
+  targetId: string,
+): Promise<string> {
+  let projectId: string | null = null;
+
+  if (targetType === "Task" || targetType === "Optimization") {
+    const target = await prisma.optimizationTask.findUnique({
+      where: { id: targetId },
+      select: { projectId: true },
+    });
+    projectId = target?.projectId ?? null;
+  } else if (targetType === "ContentDraft") {
+    const target = await prisma.contentDraft.findUnique({
+      where: { id: targetId },
+      select: { projectId: true },
+    });
+    projectId = target?.projectId ?? null;
+  } else if (targetType === "PageAudit") {
+    const target = await prisma.pageAudit.findUnique({
+      where: { id: targetId },
+      select: { page: { select: { projectId: true } } },
+    });
+    projectId = target?.page.projectId ?? null;
+  } else if (targetType === "GeoRun") {
+    const target = await prisma.geoRun.findUnique({
+      where: { id: targetId },
+      select: { projectId: true },
+    });
+    projectId = target?.projectId ?? null;
+  } else if (targetType === "Project") {
+    const target = await prisma.project.findUnique({
+      where: { id: targetId },
+      select: { id: true },
+    });
+    projectId = target?.id ?? null;
+  } else {
+    throw Errors.badRequest("不支持的评论目标类型");
+  }
+
+  if (!projectId) throw Errors.notFound("评论目标");
+  return projectId;
 }

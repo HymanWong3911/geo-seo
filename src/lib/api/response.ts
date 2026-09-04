@@ -50,6 +50,16 @@ export function fail(code: string, message: string, status: number, details?: un
 }
 
 export function handleError(err: unknown) {
+  // Next.js uses this sentinel to opt a route out of static rendering. It must
+  // escape userland catch blocks; otherwise builds log a misleading API 500
+  // for every authenticated route while collecting page data.
+  if (
+    err instanceof Error &&
+    "digest" in err &&
+    (err as Error & { digest?: string }).digest === "DYNAMIC_SERVER_USAGE"
+  ) {
+    throw err;
+  }
   if (err instanceof HttpError) {
     return fail(err.code, err.message, err.status, err.details);
   }

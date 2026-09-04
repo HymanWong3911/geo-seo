@@ -187,20 +187,20 @@ model Project {
   updatedAt       DateTime      @updatedAt
   archivedAt      DateTime?
 
-  brands       Brand[]
-  competitors  Competitor[]
-  pages        Page[]
-  keywords     Keyword[]
-  geoQuestions GeoQuestion[]
-  tasks        OptimizationTask[]
-  geoRuns      GeoRun[]
-  members      UserProject[]
-  contentDrafts ContentDraft[]
-  cmsIntegrations CmsIntegration[]
+  brands              Brand[]
+  competitors         Competitor[]
+  pages               Page[]
+  keywords            Keyword[]
+  geoQuestions        GeoQuestion[]
+  tasks               OptimizationTask[]
+  geoRuns             GeoRun[]
+  members             UserProject[]
+  contentDrafts       ContentDraft[]
+  cmsIntegrations     CmsIntegration[]
   distributionTargets DistributionTarget[]
-  keywordExpansions KeywordExpansion[]
-  brandMentions BrandMention[]
-  reports      Report[]
+  keywordExpansions   KeywordExpansion[]
+  brandMentions       BrandMention[]
+  reports             Report[]
 
   @@index([status])
 }
@@ -267,16 +267,16 @@ model PageAudit {
 }
 
 model Keyword {
-  id        String        @id @default(cuid())
+  id        String       @id @default(cuid())
   projectId String
   text      String
-  language  String        @default("zh-CN")
-  region    String        @default("CN")
+  language  String       @default("zh-CN")
+  region    String       @default("CN")
   intent    SearchIntent
-  priority  Int           @default(3)
+  priority  Int          @default(3)
   targetUrl String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -284,19 +284,19 @@ model Keyword {
 }
 
 model GeoQuestion {
-  id         String        @id @default(cuid())
+  id         String       @id @default(cuid())
   projectId  String
   question   String
-  language   String        @default("zh-CN")
-  region     String        @default("CN")
+  language   String       @default("zh-CN")
+  region     String       @default("CN")
   intent     SearchIntent
-  priority   Int           @default(3)
+  priority   Int          @default(3)
   keywordIds String[]
-  active     Boolean       @default(true)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 
-  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   runs    GeoRunResult[]
 
   @@index([projectId, active])
@@ -305,22 +305,22 @@ model GeoQuestion {
 // ============= GEO 监测 =============
 
 model GeoRun {
-  id           String    @id @default(cuid())
-  projectId    String
-  triggerType  String    // "MANUAL" | "SCHEDULED" | "RETRY"
-  provider     String
-  model        String
-  status       JobStatus @default(PENDING)
-  questionIds  String[]
-  startedAt    DateTime?
-  finishedAt   DateTime?
-  retryCount   Int       @default(0)
-  errorMessage String?
-  totalQuestions   Int?     // 同步时记录，便于 dashboard / audit 一次性读取
-  answeredQuestions Int?     // successCount，存入后便于 mention-rate 计算
-  createdAt    DateTime  @default(now())
+  id                String    @id @default(cuid())
+  projectId         String
+  triggerType       String // "MANUAL" | "SCHEDULED" | "RETRY"
+  provider          String
+  model             String
+  status            JobStatus @default(PENDING)
+  questionIds       String[]
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  retryCount        Int       @default(0)
+  errorMessage      String?
+  totalQuestions    Int? // 同步时记录，便于 dashboard / audit 一次性读取
+  answeredQuestions Int? // successCount，存入后便于 mention-rate 计算
+  createdAt         DateTime  @default(now())
 
-  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   results GeoRunResult[]
 
   @@index([projectId, createdAt])
@@ -332,8 +332,10 @@ model GeoRunResult {
   geoRunId                String
   geoQuestionId           String
   answer                  String   @db.Text
-  providerSource          String   // "perplexity" | "kimi" | "doubao" | "llm_simulation"
+  providerSource          String // "perplexity" | "kimi" | "doubao" | "llm_simulation"
   providerAttempts        Int      @default(1)
+  provenanceKind          String   @default("real-search")
+  isSynthetic             Boolean  @default(false)
   citedUrls               String[]
   mentionedBrands         String[]
   mentionedCompetitors    String[]
@@ -351,6 +353,7 @@ model GeoRunResult {
   @@index([geoRunId])
   @@index([geoQuestionId, createdAt])
   @@index([providerSource, createdAt])
+  @@index([isSynthetic, createdAt])
 }
 
 // ============= 任务 =============
@@ -401,7 +404,7 @@ model LlmCall {
   id               String   @id @default(cuid())
   projectId        String?
   geoRunId         String?
-  jobType          String   // "real-search" | "llm-fallback" | "geo-analysis" | "content-analysis" | "report-generation"
+  jobType          String // "real-search" | "llm-fallback" | "geo-analysis" | "content-analysis" | "report-generation"
   provider         String
   model            String
   promptTokens     Int      @default(0)
@@ -471,33 +474,34 @@ enum ContentSource {
 }
 
 model ContentDraft {
-  id               String             @id @default(cuid())
-  projectId        String
-  title            String
-  content          String             @db.Text
-  contentFormat    String             @default("html")
-  excerpt          String?
-  metaTitle        String?
-  metaDescription  String?
-  slug             String?
-  sourceType       ContentSource
-  sourcePrompt     String?
-  targetUrl        String?
-  targetKeywords   String[]
-  status           ContentDraftStatus @default(DRAFT)
-  authorId         String
-  reviewerId       String?
-  reviewNotes      String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  submittedAt      DateTime?
-  reviewedAt       DateTime?
-  publishedAt      DateTime?
+  id              String             @id @default(cuid())
+  projectId       String
+  title           String
+  content         String             @db.Text
+  contentFormat   String             @default("html")
+  excerpt         String?
+  metaTitle       String?
+  metaDescription String?
+  slug            String?
+  sourceType      ContentSource
+  sourcePrompt    String?
+  provenance      Json?
+  targetUrl       String?
+  targetKeywords  String[]
+  status          ContentDraftStatus @default(DRAFT)
+  authorId        String
+  reviewerId      String?
+  reviewNotes     String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  publishedAt     DateTime?
 
-  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  revisions ContentRevision[]
-  reviews   ContentReview[]
-  publishLog PublishLog?
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisions        ContentRevision[]
+  reviews          ContentReview[]
+  publishLog       PublishLog?
   distributionLogs DistributionLog[]
 
   @@index([projectId, status])
@@ -516,6 +520,7 @@ model ContentRevision {
   metaTitle       String?
   metaDescription String?
   changeNote      String?
+  provenance      Json?
   createdById     String
   createdAt       DateTime @default(now())
 
@@ -538,16 +543,19 @@ model ContentReview {
 }
 
 model CmsIntegration {
-  id         String   @id @default(cuid())
-  projectId  String
-  name       String
-  type       String   @default("self-hosted")
-  baseUrl    String
-  apiKeyHash String
-  config     Json?
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String   @id @default(cuid())
+  projectId       String
+  name            String
+  type            String   @default("self-hosted")
+  baseUrl         String
+  apiKeyHash      String
+  apiKeyEncrypted String?
+  apiKeyIv        String?
+  apiKeyTag       String?
+  config          Json?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   publishLogs PublishLog[]
@@ -569,8 +577,8 @@ model PublishLog {
   rollbackReason   String?
   createdAt        DateTime  @default(now())
 
-  draft           ContentDraft   @relation(fields: [draftId], references: [id], onDelete: Cascade)
-  cmsIntegration  CmsIntegration @relation(fields: [cmsIntegrationId], references: [id])
+  draft          ContentDraft   @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  cmsIntegration CmsIntegration @relation(fields: [cmsIntegrationId], references: [id])
 
   @@index([status, createdAt])
 }
@@ -585,37 +593,37 @@ enum DistributionPlatform {
   NOTION
   CUSTOM_WEBHOOK
   // 内容平台
-  BAIJIAHAO         // 百家号
-  DOUYIN            // 抖音
-  XIAOHONGSHU       // 小红书
+  BAIJIAHAO // 百家号
+  DOUYIN // 抖音
+  XIAOHONGSHU // 小红书
   // AI 智能体
-  COZE              // 字节扣子
-  BAIDU_WENXIN      // 百度文心
-  TENCENT_YUANBAO   // 腾讯元宝
-  DINGTALK          // 钉钉
+  COZE // 字节扣子
+  BAIDU_WENXIN // 百度文心
+  TENCENT_YUANBAO // 腾讯元宝
+  DINGTALK // 钉钉
   // 搜索引擎提交
-  BAIDU_SEARCH      // 百度搜索
-  SOGOU_SEARCH      // 搜狗搜索
-  SO360_SEARCH      // 360搜索
-  SHENMA_SEARCH     // 神马搜索
+  BAIDU_SEARCH // 百度搜索
+  SOGOU_SEARCH // 搜狗搜索
+  SO360_SEARCH // 360搜索
+  SHENMA_SEARCH // 神马搜索
   // 引用/收录站点
-  CITATION_SITE     // 引用站点
-  INDEX_SITE        // 收录站点
+  CITATION_SITE // 引用站点
+  INDEX_SITE // 收录站点
 }
 
 model DistributionTarget {
-  id        String              @id @default(cuid())
-  projectId String
-  platform  DistributionPlatform
-  name      String
-  config    Json?
-  active    Boolean             @default(true)
+  id            String               @id @default(cuid())
+  projectId     String
+  platform      DistributionPlatform
+  name          String
+  config        Json?
+  active        Boolean              @default(true)
   // 发布模式：MANUAL=手动发布, AUTO=自动发布(审核通过后自动发)
-  publishMode String             @default("MANUAL")
+  publishMode   String               @default("MANUAL")
   // 自动发布触发条件：APPROVED=审核通过后, PUBLISHED=已发布后
-  autoPublishOn String             @default("APPROVED")
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  autoPublishOn String               @default("APPROVED")
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   project Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   logs    DistributionLog[]
@@ -635,8 +643,8 @@ model DistributionLog {
   sentAt       DateTime?
   createdAt    DateTime  @default(now())
 
-  target     DistributionTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
-  draft      ContentDraft?      @relation(fields: [draftId], references: [id], onDelete: SetNull)
+  target DistributionTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  draft  ContentDraft?      @relation(fields: [draftId], references: [id], onDelete: SetNull)
 
   @@index([targetId, createdAt])
   @@index([status, createdAt])
@@ -645,16 +653,16 @@ model DistributionLog {
 // ============= v1.2 关键词扩展 =============
 
 model KeywordExpansion {
-  id               String        @id @default(cuid())
-  projectId        String
-  seedKeywordId    String?
-  seedKeywordText  String
-  expandedText     String
-  searchVolume     Int?
-  difficulty       Int?
-  intent           SearchIntent?
-  status           String        @default("SUGGESTED")
-  createdAt        DateTime      @default(now())
+  id              String        @id @default(cuid())
+  projectId       String
+  seedKeywordId   String?
+  seedKeywordText String
+  expandedText    String
+  searchVolume    Int?
+  difficulty      Int?
+  intent          SearchIntent?
+  status          String        @default("SUGGESTED")
+  createdAt       DateTime      @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -711,15 +719,15 @@ enum ReportType {
 }
 
 model Report {
-  id          String      @id @default(cuid())
+  id          String     @id @default(cuid())
   projectId   String
   type        ReportType
   periodFrom  DateTime
   periodTo    DateTime
-  auditId     String?                                  // AUDIT 类型关联
-  content     String      @db.Text                    // Markdown 内容
-  generatedBy String?                                 // userId
-  createdAt   DateTime    @default(now())
+  auditId     String? // AUDIT 类型关联
+  content     String     @db.Text // Markdown 内容
+  generatedBy String? // userId
+  createdAt   DateTime   @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -728,27 +736,27 @@ model Report {
 
 // ============= 通知（v1.2 新增）============
 enum NotificationType {
-  COMMENT_MENTION         // 有人 @ 提到我
-  COMMENT_REPLY           // 有人回复我的评论
-  TASK_ASSIGNED           // 任务被分配
-  TASK_DUE_SOON           // 任务快到期
-  GEO_ANOMALY             // GEO 异常（提及率突降等）
-  DRAFT_APPROVED          // 草稿通过审核
-  DRAFT_REJECTED          // 草稿被驳回
-  SYSTEM                  // 系统通知
+  COMMENT_MENTION // 有人 @ 提到我
+  COMMENT_REPLY // 有人回复我的评论
+  TASK_ASSIGNED // 任务被分配
+  TASK_DUE_SOON // 任务快到期
+  GEO_ANOMALY // GEO 异常（提及率突降等）
+  DRAFT_APPROVED // 草稿通过审核
+  DRAFT_REJECTED // 草稿被驳回
+  SYSTEM // 系统通知
 }
 
 model Notification {
-  id         String           @id @default(cuid())
-  userId     String
-  type       NotificationType
-  title      String
-  content    String?          // 长内容（可选）
-  link       String?          // 跳转链接
-  metadata   Json?            // 任意元数据
-  read       Boolean          @default(false)
-  readAt     DateTime?
-  createdAt  DateTime         @default(now())
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  content   String? // 长内容（可选）
+  link      String? // 跳转链接
+  metadata  Json? // 任意元数据
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
 
   @@index([userId, read, createdAt])
   @@index([createdAt])
@@ -756,15 +764,15 @@ model Notification {
 
 // 通知偏好设置（每个用户、每种类型）
 model NotificationPreference {
-  id              String           @id @default(cuid())
-  userId          String
-  type            NotificationType
-  channelInApp    Boolean          @default(true)   // 站内
-  channelEmail    Boolean          @default(false)  // 邮件
-  channelFeishu   Boolean          @default(false)
-  channelWeCom    Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id            String           @id @default(cuid())
+  userId        String
+  type          NotificationType
+  channelInApp  Boolean          @default(true) // 站内
+  channelEmail  Boolean          @default(false) // 邮件
+  channelFeishu Boolean          @default(false)
+  channelWeCom  Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@unique([userId, type])
   @@index([userId])

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Errors, HttpError } from "./response";
+import { Errors, handleError, HttpError } from "./response";
 
 describe("HttpError", () => {
   it("captures code, message, status", () => {
@@ -47,5 +47,15 @@ describe("Errors factory", () => {
     const e = Errors.mustChangePassword();
     expect(e.status).toBe(403);
     expect(e.code).toBe("MUST_CHANGE_PASSWORD");
+  });
+});
+
+describe("handleError", () => {
+  it("rethrows Next.js dynamic server usage sentinels", () => {
+    const error = Object.assign(new Error("dynamic route"), {
+      digest: "DYNAMIC_SERVER_USAGE",
+    });
+
+    expect(() => handleError(error)).toThrow(error);
   });
 });

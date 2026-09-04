@@ -1,6 +1,6 @@
 // NextAuth.js v5（Auth.js）鉴权。
 // 详细说明见 dev doc v1.1 15.4 节。
-// 项目级权限仍走 getUserProjectRole() 应用层判断（见下文）。
+// 项目级权限统一由 src/lib/api/auth.ts 处理。
 
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -15,10 +15,9 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // Always trust the Host header (local dev / behind reverse proxy).
-  // Replaces the .env AUTH_TRUST_HOST=true hack from 2026-07-20 — keep this
-  // until we have a real NEXTAUTH_URL + reverse proxy in front.
-  trustHost: true,
+  // Local development trusts the direct Host header. Production deployments
+  // must explicitly opt in after the reverse-proxy boundary is configured.
+  trustHost: process.env.NODE_ENV !== "production" || process.env.AUTH_TRUST_HOST === "true",
   session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
   providers: [
     Credentials({
@@ -90,33 +89,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   pages: { signIn: "/login", error: "/login" },
 });
-
-// ============= 项目级权限 =============
-
-import type { ProjectRole, UserRole } from "@prisma/client";
-
-export async function getUserProjectRole(
-  userId: string,
-  userRole: UserRole,
-  projectId: string,
-): Promise<ProjectRole | null> {
-  // ADMIN 默认拥有所有项目 OWNER 权限
-  if (userRole === "ADMIN") return "OWNER";
-
-  const membership = await prisma.userProject.findUnique({
-    where: { userId_projectId: { userId, projectId } },
-  });
-  return membership?.role ?? null;
-}
-
-export async function requireProjectRole(
-  userId: string,
-  userRole: UserRole,
-  projectId: string,
-  allowed: ProjectRole[],
-): Promise<void> {
-  const role = await getUserProjectRole(userId, userRole, projectId);
-  if (!role || !allowed.includes(role)) {
-    throw new Error("Forbidden");
-  }
-}
