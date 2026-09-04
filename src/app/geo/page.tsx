@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProjectSelector } from "@/components/forms/ProjectSelector";
 import { SkeletonTable } from "@/components/ui/Skeleton";
@@ -66,16 +66,16 @@ export default function GeoPage() {
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!projectId) { setQuestions([]); return; }
     setLoading(true);
     const res = await fetch(`/api/projects/${projectId}/geo/questions`);
     const json = await res.json();
     setQuestions(json.data ?? []);
     setLoading(false);
-  }
+  }, [projectId]);
 
-  useEffect(() => { void load(); }, [projectId]);
+  useEffect(() => { void load(); }, [load]);
 
   async function toggleActive(q: GeoQuestion) {
     const res = await fetch(`/api/geo/questions/${q.id}`, {

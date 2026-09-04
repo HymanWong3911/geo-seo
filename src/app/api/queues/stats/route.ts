@@ -1,7 +1,7 @@
 // BullMQ 队列健康检查端点。
 // 提供各队列的等待/活跃/失败/延迟任务数,用于 worker 监控。
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/api/auth";
+import { requireAdmin } from "@/lib/api/auth";
 import { Queue } from "bullmq";
 import { connection } from "@/lib/queue";
 import { handleError } from "@/lib/api/response";
@@ -13,17 +13,15 @@ const QUEUE_NAMES = [
   "geo-run",
   "page-audit",
   "content-analysis",
-  "report",
+  "report-generation",
   "scheduler",
-  "retention",
   "cms-publish",
   "distribution",
-  "alert-sender",
 ];
 
 export async function GET() {
   try {
-    await requireSession();
+    await requireAdmin();
 
     const stats: Record<string, { waiting: number; active: number; completed: number; failed: number; delayed: number }> = {};
     const errors: string[] = [];

@@ -1,9 +1,10 @@
 // 告警 sender 单元测试（mock fetch + redis + prisma）。
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockSet = vi.fn();
 const mockFindMany = vi.fn();
 const mockCreate = vi.fn();
+const mockFetch = vi.fn();
 
 vi.mock("@/lib/queue", () => ({
   redis: { set: (...args: unknown[]) => mockSet(...args) },
@@ -17,6 +18,10 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/mailer", () => ({
   sendMail: vi.fn().mockResolvedValue(true),
 }));
+vi.mock("@/lib/http/outbound", () => ({
+  outboundFetch: (...args: unknown[]) => mockFetch(...args),
+  parseHostAllowlist: () => [],
+}));
 
 import { sendAlert } from "./sender";
 
@@ -28,6 +33,13 @@ describe("sendAlert", () => {
     // 默认：set 返回 OK（不重复）
     mockSet.mockResolvedValue("OK");
     mockCreate.mockResolvedValue({});
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValue(new Response("ok", { status: 200 }));
+    vi.stubGlobal("fetch", mockFetch);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("sends to all active channels subscribed to event", async () => {
@@ -53,6 +65,7 @@ describe("sendAlert", () => {
       payload: { title: "测试", 项目: "测试项目" },
     });
 
+    expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(mockCreate).toHaveBeenCalledTimes(2);
   });
 

@@ -26,44 +26,29 @@ interface QueueData {
 }
 
 interface HealthData {
-  status: "ok" | "degraded";
-  checks: {
-    database: { ok: boolean; latencyMs: number };
-    redis: { ok: boolean; latencyMs: number };
-    counts: { ok: boolean; latencyMs: number };
-    lastRun: { ok: boolean; latencyMs: number };
-    llmUsage24h: { ok: boolean; latencyMs: number };
-    channels: { ok: boolean; latencyMs: number; availableChannels: string[] };
-    queues: { ok: boolean; latencyMs: number };
-  };
-  data: {
+  counts: {
     projectCount: number;
-    geoRunCount: number;
+    geoRunCount24h: number;
     geoRunResultCount: number;
     brandMentionCount: number;
-    llmCallCount: number;
+    llmCallCount24h: number;
     contentDraftCount: number;
-    availableChannels: string[];
-    lastGeoRun?: { id: string; status: string; finishedAt: string; createdAt: string };
-    llmStats24h?: {
-      calls24h: number;
-      tokens24h: { total: number };
-      costCents24h: number | string;
-      byProvider: Record<string, { calls: number; tokens: number; costCents: number | string }>;
-    };
   };
+  lastGeoRun?: { id: string; status: string; finishedAt: string; createdAt: string };
+  workerProcesses: number;
+  llm24h: { calls: number; tokens: number; costCents: number | string };
 }
+
+type ChannelData = Record<string, { isConfigured: boolean; isAvailable: boolean }>;
 
 const QUEUE_LABELS: Record<string, { icon: string; label: string; desc: string }> = {
   "geo-run": { icon: "🤖", label: "GEO 运行", desc: "AI 搜索可见度监测" },
   "page-audit": { icon: "🔍", label: "页面诊断", desc: "SEO 评分 + 抓取错误" },
   "content-analysis": { icon: "📊", label: "内容分析", desc: "关键词覆盖 + 质量评分" },
-  "report": { icon: "📑", label: "报告生成", desc: "PDF / 周报 / 月报" },
-  "scheduler": { icon: "⏰", label: "调度器", desc: "每日 GEO 监测 + 告警汇总" },
-  "retention": { icon: "🗑️", label: "数据归档", desc: "过期数据清理" },
+  "report-generation": { icon: "📑", label: "报告生成", desc: "PDF / 周报 / 月报" },
+  "scheduler": { icon: "⏰", label: "调度器", desc: "每日 GEO 监测 + 告警汇总 + 数据归档" },
   "cms-publish": { icon: "📤", label: "CMS 发布", desc: "草稿 → WordPress/其他" },
   "distribution": { icon: "🔀", label: "分发", desc: "知乎/微信/百家号 等" },
-  "alert-sender": { icon: "🔔", label: "告警发送", desc: "邮件/钉钉/企业微信" },
 };
 
 const CHANNEL_LABELS: Record<string, { icon: string; label: string }> = {
@@ -76,6 +61,7 @@ const CHANNEL_LABELS: Record<string, { icon: string; label: string }> = {
 export default function SystemHealthPage() {
   const [queues, setQueues] = useState<QueueData | null>(null);
   const [health, setHealth] = useState<HealthData | null>(null);
+  const [channels, setChannels] = useState<ChannelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [age, setAge] = useState(0);
 
@@ -83,13 +69,16 @@ export default function SystemHealthPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [q, h] = await Promise.all([
+        const [q, h, c] = await Promise.all([
           fetch("/api/queues/stats", { cache: "no-store" }),
-          fetch("/api/health", { cache: "no-store" }),
+          fetch("/api/system/health", { cache: "no-store" }),
+          fetch("/api/search/channels/diagnostics", { cache: "no-store" }),
         ]);
         if (!cancelled) {
           if (q.ok) setQueues((await q.json()).data);
-          if (h.ok) setHealth(await h.json());
+          if (h.ok) setHealth((await h.json()).data);
+          if (c.ok) setChannels((await c.json()).data);
+          setAge(0);
           setLoading(false);
         }
       } catch {
@@ -106,6 +95,10 @@ export default function SystemHealthPage() {
     };
   }, []);
 
+  const isHealthy = Boolean(
+    health && queues && health.workerProcesses > 0 && queues.errors === null,
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -116,14 +109,14 @@ export default function SystemHealthPage() {
         <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
           <span className={cn(
             "h-2 w-2 rounded-full",
-            health?.status === "ok" ? "bg-success animate-pulse" : "bg-warning"
+            isHealthy ? "bg-success animate-pulse" : "bg-warning"
           )} />
-          <span>{health?.status === "ok" ? "online" : "degraded"}</span>
+          <span>{isHealthy ? "online" : "degraded"}</span>
           <span className="tabular-nums">· {age}s ago</span>
         </div>
       </PageHeader>
 
-      {loading || !queues || !health ? (
+      {loading || !queues || !health || !channels ? (
         <div className="space-y-3">
           <Skeleton className="h-20" />
           <Skeleton className="h-32" />
@@ -163,7 +156,7 @@ export default function SystemHealthPage() {
             <div className="border border-border bg-card rounded-lg p-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {Object.keys(CHANNEL_LABELS).map((c) => {
-                  const available = health.data.availableChannels.includes(c);
+                  const available = channels[c]?.isAvailable ?? false;
                   return (
                     <div
                       key={c}
@@ -194,14 +187,12 @@ export default function SystemHealthPage() {
                   );
                 })}
               </div>
-              {health.data.llmStats24h && (
-                <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-muted-foreground">24h LLM 用量</span>
-                  <span className="tabular-nums">
-                    {health.data.llmStats24h.calls24h} calls · {formatNumber(health.data.llmStats24h.tokens24h.total)} tokens · {formatCost(health.data.llmStats24h.costCents24h)}
-                  </span>
-                </div>
-              )}
+              <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between text-[10px] font-mono">
+                <span className="text-muted-foreground">24h LLM 用量</span>
+                <span className="tabular-nums">
+                  {health.llm24h.calls} calls · {formatNumber(health.llm24h.tokens)} tokens · {formatCost(health.llm24h.costCents)}
+                </span>
+              </div>
             </div>
           </DashboardSection>
 
@@ -269,36 +260,36 @@ export default function SystemHealthPage() {
             <div className="border border-border bg-card rounded-lg p-4">
               <div className="eyebrow mb-3">数据统计</div>
               <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-                <div className="flex justify-between"><span className="text-muted-foreground">项目</span><span className="tabular-nums">{health.data.projectCount}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">GEO runs</span><span className="tabular-nums">{health.data.geoRunCount}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">结果</span><span className="tabular-nums">{health.data.geoRunResultCount}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">提及</span><span className="tabular-nums">{health.data.brandMentionCount}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">LLM calls</span><span className="tabular-nums">{health.data.llmCallCount}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">草稿</span><span className="tabular-nums">{health.data.contentDraftCount}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">项目</span><span className="tabular-nums">{health.counts.projectCount}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">GEO runs (24h)</span><span className="tabular-nums">{health.counts.geoRunCount24h}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">结果</span><span className="tabular-nums">{health.counts.geoRunResultCount}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">提及</span><span className="tabular-nums">{health.counts.brandMentionCount}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">LLM calls (24h)</span><span className="tabular-nums">{health.counts.llmCallCount24h}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">草稿</span><span className="tabular-nums">{health.counts.contentDraftCount}</span></div>
               </div>
             </div>
             <div className="border border-border bg-card rounded-lg p-4">
               <div className="eyebrow mb-3">最近 GEO Run</div>
-              {health.data.lastGeoRun ? (
+              {health.lastGeoRun ? (
                 <div className="space-y-2 text-xs font-mono">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">状态</span>
                     <span className={cn(
-                      health.data.lastGeoRun.status === "SUCCESS" ? "text-success" :
-                      health.data.lastGeoRun.status === "RUNNING" ? "text-info animate-pulse" :
+                      health.lastGeoRun.status === "SUCCESS" ? "text-success" :
+                      health.lastGeoRun.status === "RUNNING" ? "text-info animate-pulse" :
                       "text-destructive"
-                    )}>{health.data.lastGeoRun.status}</span>
+                    )}>{health.lastGeoRun.status}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">开始</span>
-                    <span className="tabular-nums">{new Date(health.data.lastGeoRun.createdAt).toLocaleString("zh-CN", { hour12: false })}</span>
+                    <span className="tabular-nums">{new Date(health.lastGeoRun.createdAt).toLocaleString("zh-CN", { hour12: false })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">完成</span>
-                    <span className="tabular-nums">{health.data.lastGeoRun.finishedAt ? new Date(health.data.lastGeoRun.finishedAt).toLocaleString("zh-CN", { hour12: false }) : "—"}</span>
+                    <span className="tabular-nums">{health.lastGeoRun.finishedAt ? new Date(health.lastGeoRun.finishedAt).toLocaleString("zh-CN", { hour12: false }) : "—"}</span>
                   </div>
                   <div className="pt-2 border-t border-border/30">
-                    <Link href={`/geo/runs/${health.data.lastGeoRun.id}`} className="text-primary hover:underline text-[10px]">
+                    <Link href={`/geo/runs/${health.lastGeoRun.id}`} className="text-primary hover:underline text-[10px]">
                       查看详情 →
                     </Link>
                   </div>

@@ -16,9 +16,10 @@ import { audit } from "@/lib/audit/logger";
 import type { PageAuditJob } from "@/lib/queue/audit";
 import { Prisma } from "@prisma/client";
 
-export const pageAuditWorker = new Worker<PageAuditJob>(
-  "page-audit",
-  async (job) => {
+export function createPageAuditWorker() {
+  return new Worker<PageAuditJob>(
+    "page-audit",
+    async (job) => {
     const { projectId, url, userId, triggerType } = job.data;
 
     // 1. 抓取
@@ -93,9 +94,10 @@ export const pageAuditWorker = new Worker<PageAuditJob>(
       score: analysis.score,
       findingsCount: analysis.findings.length,
     };
-  },
-  { connection, concurrency: 5 },
-);
+    },
+    { connection, concurrency: 5 },
+  );
+}
 
 // 同步执行（开发模式 / 单次审计）
 export async function runPageAuditSync(

@@ -2,7 +2,7 @@
 // 2026-07-23: 先尝试加载 .env（vitest 不会自动 dotenv），找不到再走 fallback。
 // 没有 .env 时 fallback 到 localhost stub,自己跑全链路（test:e2e）时 .env 必须存在。
 try {
-  // Node 20.6+ 原生 .env loader
+  // Node 22 原生 .env loader
   process.loadEnvFile?.(".env");
 } catch {
   // .env 不存在时忽略,保留下面的 fallback

@@ -4,7 +4,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireSession, resolveAccessibleProjectIds } from "@/lib/api/auth";
 import { handleError, success } from "@/lib/api/response";
 
 const querySchema = z.object({
@@ -35,13 +35,27 @@ export async function GET(req: NextRequest) {
     }
     const limit = parsed.data.limit;
     const projectFilter = parsed.data.projectId;
+    const projectIds = await resolveAccessibleProjectIds(
+      session.user.id,
+      session.user.role,
+      projectFilter,
+    );
 
     const items: ActivityItem[] = [];
+
+    if (projectIds.length === 0) {
+      return success({
+        range: { limit },
+        items,
+        totalEvents: 0,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // 1) 最近 GEO run 完成
     const geoRuns = await prisma.geoRun.findMany({
       where: {
-        ...(projectFilter ? { projectId: projectFilter } : {}),
+        projectId: { in: projectIds },
         finishedAt: { not: null },
       },
       orderBy: { finishedAt: "desc" },
@@ -68,6 +82,9 @@ export async function GET(req: NextRequest) {
 
     // 2) AuditLog 关键操作
     const auditLogs = await prisma.auditLog.findMany({
+      where: session.user.role === "ADMIN" && !projectFilter
+        ? {}
+        : { userId: session.user.id },
       orderBy: { createdAt: "desc" },
       take: limit,
       select: {
@@ -90,7 +107,7 @@ export async function GET(req: NextRequest) {
     // 3) LLM 关键调用(失败或高 cost)
     const llmCalls = await prisma.llmCall.findMany({
       where: {
-        ...(projectFilter ? { projectId: projectFilter } : {}),
+        projectId: { in: projectIds },
         OR: [{ success: false }, { costCents: { gt: 5 } }],
       },
       orderBy: { createdAt: "desc" },

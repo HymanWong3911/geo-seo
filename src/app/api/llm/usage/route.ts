@@ -6,7 +6,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireSession, resolveAccessibleProjectIds } from "@/lib/api/auth";
 import { handleError, success } from "@/lib/api/response";
 
 const querySchema = z.object({
@@ -44,7 +44,7 @@ function estimateCost(
 
 export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    const session = await requireSession();
     const url = new URL(req.url);
     const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams));
     if (!parsed.success) {
@@ -52,10 +52,15 @@ export async function GET(req: NextRequest) {
     }
     const { days, projectId } = parsed.data;
     const since = new Date(Date.now() - days * 24 * 3600 * 1000);
+    const projectIds = await resolveAccessibleProjectIds(
+      session.user.id,
+      session.user.role,
+      projectId,
+    );
 
     const where = {
       createdAt: { gte: since },
-      ...(projectId ? { projectId } : {}),
+      projectId: { in: projectIds },
     };
 
     // 1) 按 model 拆分

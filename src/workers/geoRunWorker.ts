@@ -198,6 +198,8 @@ export async function runGeoRunSync(job: GeoRunJob): Promise<{
           answer: result.answer,
           providerSource: provider,
           providerAttempts: attempts,
+          provenanceKind: result.provenance?.kind ?? "real-search",
+          isSynthetic: result.provenance?.synthetic ?? false,
           citedUrls: result.citations,
           mentionedBrands: (analysis.mentionedBrands as string[]) ?? [],
           mentionedCompetitors: (analysis.mentionedCompetitors as string[]) ?? [],
@@ -206,7 +208,14 @@ export async function runGeoRunSync(job: GeoRunJob): Promise<{
           sentiment: (analysis.sentiment as string) ?? null,
           position: typeof analysis.primaryBrandPosition === "number" ? analysis.primaryBrandPosition : null,
           links: (analysis.links as string[]) ?? [],
-          analysis: analysis as object,
+          analysis: {
+            ...analysis,
+            provenance: result.provenance ?? {
+              kind: "real-search",
+              provider,
+              synthetic: false,
+            },
+          } as object,
         },
       });
 
@@ -220,6 +229,7 @@ export async function runGeoRunSync(job: GeoRunJob): Promise<{
           questionId: question.id,
           provider,
           attempts,
+          provenance: result.provenance,
           success: true,
         },
       });
@@ -278,10 +288,10 @@ export async function runGeoRunSync(job: GeoRunJob): Promise<{
   };
 }
 
-export const geoRunWorker = new Worker<GeoRunJob>(
-  "geo-run",
-  async (job) => {
-    return runGeoRunSync(job.data);
-  },
-  { connection, concurrency: parseInt(process.env.GEO_WORKER_CONCURRENCY ?? "5") },
-);
+export function createGeoRunWorker() {
+  return new Worker<GeoRunJob>(
+    "geo-run",
+    async (job) => runGeoRunSync(job.data),
+    { connection, concurrency: parseInt(process.env.GEO_WORKER_CONCURRENCY ?? "5") },
+  );
+}

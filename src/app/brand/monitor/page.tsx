@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProjectSelector } from "@/components/forms/ProjectSelector";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -62,7 +62,7 @@ export default function BrandMonitorPage() {
   const [sourceFilter, setSourceFilter] = useState("");
   const [scanPhase, setScanPhase] = useState<"idle" | "searching" | "analyzing" | "persisting">("idle");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!projectId) { setMentions([]); return; }
     setLoading(true);
     setError("");
@@ -75,9 +75,9 @@ export default function BrandMonitorPage() {
       setError(err instanceof Error ? err.message : "网络错误");
     }
     setLoading(false);
-  }
+  }, [projectId]);
 
-  useEffect(() => { void load(); }, [projectId]);
+  useEffect(() => { void load(); }, [load]);
 
   async function triggerScan() {
     if (!projectId) return;

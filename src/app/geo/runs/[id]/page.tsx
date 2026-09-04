@@ -14,6 +14,8 @@ interface GeoRunResult {
   answer: string;
   providerSource: string;
   providerAttempts: number;
+  provenanceKind: string;
+  isSynthetic: boolean;
   citedUrls: string[];
   mentionedBrands: string[];
   mentionedCompetitors: string[];
@@ -219,6 +221,12 @@ export default function GeoRunDetailPage() {
         </div>
       )}
 
+      {run.results.some((result) => result.isSynthetic) && (
+        <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+          本次运行包含 LLM 模拟回答。模拟结果只用于验证流程，不计入正式 GEO 可见度指标，也不代表真实搜索引擎引用。
+        </div>
+      )}
+
       {/* KPI 卡片 */}
       {stats && (
         <StatGrid>
@@ -293,6 +301,11 @@ export default function GeoRunDetailPage() {
                           <span className="rounded-md bg-violet-100 dark:bg-violet-950/30 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
                             {r.providerSource}
                           </span>
+                          {r.isSynthetic && (
+                            <span className="rounded-md border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                              模拟结果 · 非真实搜索
+                            </span>
+                          )}
                           <BrandBadge
                             mentioned={r.primaryBrandMentioned}
                             recommended={r.primaryBrandRecommended}

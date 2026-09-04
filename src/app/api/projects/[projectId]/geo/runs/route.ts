@@ -29,9 +29,8 @@ export async function GET(
         include: {
           _count: { select: { results: true } },
           results: {
-            take: 1,
             orderBy: { createdAt: "desc" },
-            select: { createdAt: true, providerSource: true },
+            select: { createdAt: true, providerSource: true, isSynthetic: true },
           },
         },
       }),

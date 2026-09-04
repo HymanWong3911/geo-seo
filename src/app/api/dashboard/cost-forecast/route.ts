@@ -4,26 +4,37 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireSession, resolveAccessibleProjectIds } from "@/lib/api/auth";
 import { handleError, success } from "@/lib/api/response";
+import { Prisma } from "@prisma/client";
 
 const querySchema = z.object({
   days: z.coerce.number().int().min(1).max(90).default(7),
+  projectId: z.string().optional(),
 });
 
 export async function GET(req: NextRequest) {
   try {
     const session = await requireSession();
     const url = new URL(req.url);
-    const parsed = querySchema.safeParse({ days: url.searchParams.get("days") ?? undefined });
+    const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams));
     if (!parsed.success) {
       return new Response(JSON.stringify({ error: "Invalid params" }), { status: 400 });
     }
     const days = parsed.data.days;
     const since = new Date(Date.now() - days * 24 * 3600 * 1000);
+    const projectIds = await resolveAccessibleProjectIds(
+      session.user.id,
+      session.user.role,
+      parsed.data.projectId,
+    );
+    const where = {
+      createdAt: { gte: since },
+      projectId: { in: projectIds },
+    };
 
     const agg = await prisma.llmCall.aggregate({
-      where: { createdAt: { gte: since } },
+      where,
       _sum: { costCents: true },
       _count: { id: true },
     });
@@ -33,23 +44,26 @@ export async function GET(req: NextRequest) {
     // 按 model 拆
     const byModel = await prisma.llmCall.groupBy({
       by: ["model", "provider"],
-      where: { createdAt: { gte: since } },
+      where,
       _sum: { costCents: true },
       _count: { id: true },
       orderBy: { _sum: { costCents: "desc" } },
     });
 
     // 按天拆
-    const byDay = await prisma.$queryRaw<Array<{ day: Date; cost: number; calls: bigint }>>`
+    const byDay = projectIds.length === 0
+      ? []
+      : await prisma.$queryRaw<Array<{ day: Date; cost: number; calls: bigint }>>(Prisma.sql`
       SELECT
         DATE_TRUNC('day', "createdAt") AS day,
         COALESCE(SUM("costCents"), 0)::float AS cost,
         COUNT(*)::bigint AS calls
       FROM "LlmCall"
       WHERE "createdAt" >= ${since}
+        AND "projectId" IN (${Prisma.join(projectIds)})
       GROUP BY DATE_TRUNC('day', "createdAt")
       ORDER BY day DESC
-    `;
+    `);
 
     // 计算 burn rate
     const dailyAvgCost = days > 0 ? totalCostCents / days : 0;

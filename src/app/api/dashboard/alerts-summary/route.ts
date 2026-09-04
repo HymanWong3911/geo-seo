@@ -3,12 +3,12 @@
 // 2026-07-23 新增。
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireAdmin } from "@/lib/api/auth";
 import { handleError, success } from "@/lib/api/response";
 
 export async function GET(_req: NextRequest) {
   try {
-    await requireSession();
+    await requireAdmin();
     const since24h = new Date(Date.now() - 24 * 3600 * 1000);
 
     const [totals, last24h, recent] = await Promise.all([

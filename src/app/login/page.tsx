@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
 import { LocaleSwitch } from "@/components/i18n/LocaleSwitch";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -10,6 +11,7 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { update: updateSession } = useSession();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const { t } = useI18n();
 
@@ -42,6 +44,9 @@ function LoginForm() {
     });
 
     if (res.ok && res.url.includes("/dashboard")) {
+      // This flow posts credentials manually, so explicitly refresh the client
+      // session cache before rendering authenticated navigation.
+      await updateSession();
       router.push(callbackUrl);
       router.refresh();
       return;
@@ -127,7 +132,7 @@ function LoginForm() {
       </button>
 
       <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-        <span>// {t.common.hint} :: admin@example.com</span>
+        <span>// {t.common.hint} :: assigned credentials</span>
         <Link href="/forgot-password" className="text-foreground hover:text-primary">
           {t.login.forgotLink}
         </Link>
@@ -239,7 +244,7 @@ export default function LoginPage() {
           </Suspense>
 
           <div className="mt-16 border-t border-border pt-6 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-            // hint :: 默认 admin@example.com / Admin@2026
+            // authorized users only
           </div>
         </div>
       </main>

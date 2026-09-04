@@ -56,11 +56,13 @@ export async function GET(
       day: Date;
       total: bigint;
       mentioned: bigint;
+      synthetic: bigint;
     }>>`
       SELECT
         DATE_TRUNC('day', gr."createdAt") AS day,
-        COUNT(*)::bigint AS total,
-        SUM(CASE WHEN r."primaryBrandMentioned" THEN 1 ELSE 0 END)::bigint AS mentioned
+        SUM(CASE WHEN NOT r."isSynthetic" THEN 1 ELSE 0 END)::bigint AS total,
+        SUM(CASE WHEN NOT r."isSynthetic" AND r."primaryBrandMentioned" THEN 1 ELSE 0 END)::bigint AS mentioned,
+        SUM(CASE WHEN r."isSynthetic" THEN 1 ELSE 0 END)::bigint AS synthetic
       FROM "GeoRunResult" r
       INNER JOIN "GeoRun" gr ON gr.id = r."geoRunId"
       WHERE gr."projectId" = ${params.projectId}
@@ -68,10 +70,14 @@ export async function GET(
         AND r."primaryBrandMentioned" IS NOT NULL
       GROUP BY DATE_TRUNC('day', gr."createdAt")
     `;
-    const byMention = new Map<string, { total: number; mentioned: number }>();
+    const byMention = new Map<string, { total: number; mentioned: number; synthetic: number }>();
     for (const r of mentionRows) {
       const day = r.day.toISOString().slice(0, 10);
-      byMention.set(day, { total: Number(r.total), mentioned: Number(r.mentioned) });
+      byMention.set(day, {
+        total: Number(r.total),
+        mentioned: Number(r.mentioned),
+        synthetic: Number(r.synthetic),
+      });
     }
 
     // 关联 LlmCall:每天的总 cost cents
@@ -110,8 +116,9 @@ export async function GET(
         date: day,
         totalRuns: run.totalRuns,
         successRuns: run.successRuns,
-        questionsAnswered: run.mentionedCount,
+        questionsAnswered: mention?.total ?? 0,
         mentionRatePct,
+        syntheticExcluded: mention?.synthetic ?? 0,
         llmCostCents: byCost.get(day) ?? 0,
         llmCostYuan: Number(((byCost.get(day) ?? 0) / 100).toFixed(4)),
       };
@@ -120,14 +127,20 @@ export async function GET(
     const totalRuns = runs.length;
     const successRuns = runs.filter((r) => r.status === "SUCCESS").length;
     const aggregateMention = await prisma.geoRunResult.count({
-      where: { geoRun: { projectId: params.projectId, createdAt: { gte: since } } },
+      where: {
+        geoRun: { projectId: params.projectId, createdAt: { gte: since } },
+        isSynthetic: false,
+      },
     });
     const mentionedAgg = await prisma.geoRunResult.count({
       where: {
         geoRun: { projectId: params.projectId, createdAt: { gte: since } },
         primaryBrandMentioned: true,
+        isSynthetic: false,
       },
     });
+    const syntheticExcluded = Array.from(byMention.values())
+      .reduce((sum, item) => sum + item.synthetic, 0);
     const totalMentions = aggregateMention;
     const avgMentionRatePct = totalMentions > 0 ? Math.round((mentionedAgg / totalMentions) * 100) : 0;
 
@@ -138,7 +151,8 @@ export async function GET(
         totalRuns,
         successRuns,
         successRatePct: totalRuns > 0 ? Math.round((successRuns / totalRuns) * 100) : 0,
-        questionsAnswered: runs.reduce((s, r) => s + (r.answeredQuestions ?? 0), 0),
+        questionsAnswered: totalMentions,
+        syntheticExcluded,
         avgMentionRatePct,
         totalMentionedOfTotal: `${mentionedAgg}/${totalMentions}`,
       },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProjectSelector } from "@/components/forms/ProjectSelector";
 import { Sparkline, DonutChart, EmptyState } from "@/components/ui/DashboardWidgets";
@@ -57,7 +57,7 @@ export default function TaskBoardPage() {
   const [priorityFilter, setPriorityFilter] = useState<number | null>(null);
   const [searchQ, setSearchQ] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     const url = new URL("/api/tasks", window.location.origin);
     if (projectId) url.searchParams.set("projectId", projectId);
@@ -65,9 +65,9 @@ export default function TaskBoardPage() {
     const json = await res.json();
     setTasks(json.data ?? []);
     setLoading(false);
-  }
+  }, [projectId]);
 
-  useEffect(() => { void load(); }, [projectId]);
+  useEffect(() => { void load(); }, [load]);
 
   async function updateTaskStatus(taskId: string, newStatus: Task["status"]) {
     const res = await fetch(`/api/tasks/${taskId}`, {

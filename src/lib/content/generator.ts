@@ -27,6 +27,15 @@ export interface GeneratedContent {
   outline: string[];
   faq: Array<{ question: string; answer: string }>;
   tags: string[];
+  provenance: ContentProvenance;
+}
+
+export interface ContentProvenance {
+  [key: string]: string | boolean | null;
+  kind: "llm" | "mock" | "template-fallback";
+  provider: string;
+  synthetic: boolean;
+  reason: string | null;
 }
 
 const GENERATION_PROMPT = `你是一名内容营销专家，正在为【{brandName}】写一篇高质量的内容。
@@ -49,7 +58,11 @@ const GENERATION_PROMPT = `你是一名内容营销专家，正在为【{brandNa
 3. 不要在 JSON 外加代码块标记
 4. JSON 内容完整：title + content + excerpt + metaTitle + metaDescription + outline[] + faq[] + tags[]`;
 
-function makeStubFromTopic(input: GenerateContentInput): GeneratedContent {
+function makeStubFromTopic(
+  input: GenerateContentInput,
+  provider = "unknown",
+  reason?: string,
+): GeneratedContent {
   // LLM 完全失败时的兜底模板
   const title = `${input.topic}：${input.brandName} 实战指南`;
   const content = `# ${title}\n\n## 引言\n\n本文围绕 **${input.topic}** 展开，涵盖核心概念与最佳实践。\n\n## 一、为什么 ${input.topic} 重要\n\n${input.targetKeywords.map((k) => `- ${k}`).join("\n")}\n\n## 二、${input.brandName} 的解决方案\n\n${input.brandName} 提供了完整的 ${input.topic} 解决方案，专注企业级落地。\n\n## 三、核心策略\n\n1. 数据驱动的诊断\n2. 跨平台监测\n3. 持续优化\n\n## 结论\n\n使用 ${input.brandName}，让 ${input.topic} 更简单高效。`;
@@ -64,6 +77,12 @@ function makeStubFromTopic(input: GenerateContentInput): GeneratedContent {
       { question: `什么是 ${input.topic}？`, answer: `${input.topic} 是企业级搜索可见度优化的关键方法。` },
     ],
     tags: input.targetKeywords.length > 0 ? input.targetKeywords : [input.topic],
+    provenance: {
+      kind: "template-fallback",
+      provider,
+      synthetic: true,
+      reason: reason ? reason.slice(0, 300) : null,
+    },
   };
 }
 
@@ -147,7 +166,7 @@ export async function generateContent(input: GenerateContentInput): Promise<Gene
   if (!parsed) {
     // eslint-disable-next-line no-console
     console.warn(`[generator] LLM 生成失败 (${lastError})，使用模板兜底`);
-    return makeStubFromTopic(input);
+    return makeStubFromTopic(input, llm.name, lastError);
   }
 
   // 缺失字段兜底
@@ -162,5 +181,11 @@ export async function generateContent(input: GenerateContentInput): Promise<Gene
     outline: parsed.outline ?? [],
     faq: parsed.faq ?? [],
     tags: parsed.tags ?? input.targetKeywords,
+    provenance: {
+      kind: llm.name === "mock" ? "mock" : "llm",
+      provider: llm.name,
+      synthetic: llm.name === "mock",
+      reason: null,
+    },
   };
 }

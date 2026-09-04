@@ -2,7 +2,7 @@
 //
 // 原因:
 //   * tsx 不自动加载 .env
-//   * Node 20.12.2 的 --env-file 在 ARK_API_KEY 这个 key 名上返回 "" 的 bug
+//   * 兼容历史环境中 --env-file 对空值覆盖不一致的问题
 //   * dotenv 没有被项目直接依赖
 //
 // 行为:把 .env 里的 KV 同步写进 process.env,已存在的优先。

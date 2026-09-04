@@ -18,7 +18,7 @@ export function Topbar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const { t } = useI18n();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -27,21 +27,77 @@ export function Topbar() {
   const [now, setNow] = useState<string>("");
 
   useEffect(() => {
-    void (async () => {
-      const res = await fetch("/api/projects?pageSize=100");
-      const json = await res.json();
-      setProjects(json.data ?? []);
-
-      const urlId = searchParams.get("projectId");
-      const storedId =
-        typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-      const firstId = (json.data ?? [])[0]?.id ?? "";
-      const selected = urlId || storedId || firstId;
-      if (selected) setCurrentId(selected);
+    if (sessionStatus === "loading") return;
+    if (sessionStatus !== "authenticated") {
+      setProjects([]);
+      setCurrentId("");
       setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch("/api/projects?pageSize=100");
+        if (!res.ok) throw new Error(`Projects request failed: ${res.status}`);
+        const json = await res.json();
+        if (cancelled) return;
+
+        const available = (json.data ?? []) as Project[];
+        const ids = new Set(available.map((project) => project.id));
+        const urlId = searchParams.get("projectId");
+        const storedId = localStorage.getItem(STORAGE_KEY);
+        const selected =
+          (urlId && ids.has(urlId) ? urlId : "") ||
+          (storedId && ids.has(storedId) ? storedId : "") ||
+          available[0]?.id ||
+          "";
+
+        setProjects(available);
+        setCurrentId(selected);
+        if (selected) localStorage.setItem(STORAGE_KEY, selected);
+      } catch (error) {
+        console.error("[topbar] failed to load projects", error);
+        if (!cancelled) {
+          setProjects([]);
+          setCurrentId("");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
+
+    return () => {
+      cancelled = true;
+    };
+    // The authentication transition owns data loading. Route/query changes are
+    // synchronized below without refetching the same list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sessionStatus]);
+
+  useEffect(() => {
+    if (sessionStatus !== "authenticated" || loading || projects.length === 0) return;
+
+    const urlId = searchParams.get("projectId");
+    const urlProject = projects.find((project) => project.id === urlId);
+    if (urlProject) {
+      if (urlProject.id !== currentId) {
+        setCurrentId(urlProject.id);
+        localStorage.setItem(STORAGE_KEY, urlProject.id);
+      }
+      return;
+    }
+
+    const selected = projects.find((project) => project.id === currentId)?.id ?? projects[0].id;
+    if (!selected) return;
+
+    setCurrentId(selected);
+    localStorage.setItem(STORAGE_KEY, selected);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("projectId", selected);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [currentId, loading, pathname, projects, router, searchParams, sessionStatus]);
 
   useEffect(() => {
     const tick = () => {

@@ -6,7 +6,7 @@ const mockFindFirst = vi.fn();
 const mockGroupBy = vi.fn();
 const mockAggregate = vi.fn();
 const mockQueueOp = vi.fn();
-const mockRequireSession = vi.fn();
+const mockRequireAdmin = vi.fn();
 const mockExecSync = vi.fn();
 const mockFindMany = vi.fn();
 
@@ -29,7 +29,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/api/auth", () => ({
-  requireSession: (...a: unknown[]) => mockRequireSession(...a),
+  requireAdmin: (...a: unknown[]) => mockRequireAdmin(...a),
 }));
 
 vi.mock("@/lib/queue", () => ({
@@ -64,7 +64,7 @@ const ctx = () => ({});
 describe("GET /api/system/health", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRequireSession.mockResolvedValue({ user: { id: "u1" } });
+    mockRequireAdmin.mockResolvedValue({ user: { id: "u1", role: "ADMIN" } });
     mockQueueOp.mockImplementation((k: string) => (k === "failed" ? 1 : k === "completed" ? 10 : 0));
     mockExecSync.mockReturnValue("01:23:45\n");
   });
@@ -96,8 +96,8 @@ describe("GET /api/system/health", () => {
     expect(data.queues["geo-run"].completed).toBe(10);
   });
 
-  it("returns 500 when requireSession throws", async () => {
-    mockRequireSession.mockRejectedValue(new Error("unauthorized"));
+  it("returns 500 when requireAdmin throws", async () => {
+    mockRequireAdmin.mockRejectedValue(new Error("unauthorized"));
     const res = await GET(new Request("http://x/api/system/health") as never) as any;
     expect(res.status).toBe(500);
   });

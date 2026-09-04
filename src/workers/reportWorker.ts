@@ -66,8 +66,10 @@ export async function generateReportJob(job: ReportJob): Promise<{ reportId: str
   return { reportId: report.id };
 }
 
-export const reportWorker = new Worker<ReportJob>(
-  "report-generation",
-  async (job) => generateReportJob(job.data),
-  { connection, concurrency: 2 },
-);
+export function createReportWorker() {
+  return new Worker<ReportJob>(
+    "report-generation",
+    async (job) => generateReportJob(job.data),
+    { connection, concurrency: 2 },
+  );
+}

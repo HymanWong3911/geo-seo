@@ -60,7 +60,7 @@ export async function GET(_req: NextRequest) {
         select: { score: true, createdAt: true },
       })),
       prisma.llmCall.findMany({
-        where: { createdAt: { gte: since30d } },
+        where: { projectId: { in: projectIds }, createdAt: { gte: since30d } },
         select: { totalTokens: true, costCents: true, createdAt: true },
       }),
       Promise.resolve([]),

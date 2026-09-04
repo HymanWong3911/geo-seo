@@ -7,8 +7,9 @@ import { enqueueGeoRun } from "@/lib/queue/geo";
 import { sendDailySummary, sendAlert } from "@/lib/alert/sender";
 import { checkMonthlyBudget } from "@/lib/geo/budget";
 import type { SchedulerJob } from "@/lib/queue/scheduler";
+import { runRetentionCleanup } from "./retentionWorker";
 
-async function runDailyGeoMonitor() {
+export async function runDailyGeoMonitor() {
   console.log("[scheduler] daily geo monitor starting...");
 
   const budget = await checkMonthlyBudget();
@@ -45,7 +46,8 @@ async function runDailyGeoMonitor() {
       await enqueueGeoRun({
         projectId: project.id,
         triggerType: "SCHEDULED",
-      });
+      }, { delay });
+      successCount++;
     } catch (err) {
       failedCount++;
       failedProjects.push({
@@ -55,10 +57,15 @@ async function runDailyGeoMonitor() {
     }
   }
 
-  console.log(`[scheduler] daily geo monitor scheduled`);
+  console.log(
+    `[scheduler] daily geo monitor scheduled: ${successCount} queued, ${failedCount} failed`,
+  );
+  if (failedProjects.length > 0) {
+    console.error("[scheduler] projects failed to enqueue:", failedProjects);
+  }
 }
 
-async function runDailySummary() {
+export async function runDailySummary() {
   console.log("[scheduler] daily summary starting...");
 
   const today = new Date();
@@ -92,18 +99,17 @@ async function runDailySummary() {
   });
 }
 
-async function runRetentionCleanup() {
-  console.log("[scheduler] retention cleanup starting...");
-  // TODO M7: 实现 retention worker
-  // 当前先空跑
+export async function processSchedulerJob(job: SchedulerJob) {
+  if (job.type === "daily-geo-monitor") return runDailyGeoMonitor();
+  if (job.type === "daily-summary") return runDailySummary();
+  if (job.type === "retention-cleanup") return runRetentionCleanup();
+  throw new Error(`Unknown scheduler job type: ${String((job as { type?: unknown }).type)}`);
 }
 
-export const schedulerWorker = new Worker<SchedulerJob>(
-  "scheduler",
-  async (job) => {
-    if (job.data.type === "daily-geo-monitor") await runDailyGeoMonitor();
-    else if (job.data.type === "daily-summary") await runDailySummary();
-    else if (job.data.type === "retention-cleanup") await runRetentionCleanup();
-  },
-  { connection, concurrency: 1 },
-);
+export function createSchedulerWorker() {
+  return new Worker<SchedulerJob>(
+    "scheduler",
+    async (job) => processSchedulerJob(job.data),
+    { connection, concurrency: 1 },
+  );
+}

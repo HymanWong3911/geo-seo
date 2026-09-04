@@ -85,8 +85,10 @@ export async function runContentAnalysis(job: ContentAnalysisJob): Promise<{
   return { result, tasksCreated };
 }
 
-export const contentAnalysisWorker = new Worker<ContentAnalysisJob>(
-  "content-analysis",
-  async (job) => runContentAnalysis(job.data),
-  { connection, concurrency: 3 },
-);
+export function createContentAnalysisWorker() {
+  return new Worker<ContentAnalysisJob>(
+    "content-analysis",
+    async (job) => runContentAnalysis(job.data),
+    { connection, concurrency: 3 },
+  );
+}

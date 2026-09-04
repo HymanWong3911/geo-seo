@@ -5,6 +5,7 @@ const mockAggregate = vi.fn();
 const mockGroupBy = vi.fn();
 const mockFindMany = vi.fn();
 const mockRequireSession = vi.fn();
+const mockResolveAccessibleProjectIds = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -19,6 +20,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/api/auth", () => ({
   requireSession: (...a: unknown[]) => mockRequireSession(...a),
+  resolveAccessibleProjectIds: (...a: unknown[]) => mockResolveAccessibleProjectIds(...a),
 }));
 
 vi.mock("@/lib/api/response", () => ({
@@ -35,7 +37,8 @@ function buildReq(query = ""): Request {
 describe("GET /api/llm/usage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRequireSession.mockResolvedValue({ user: { id: "u1" } });
+    mockRequireSession.mockResolvedValue({ user: { id: "u1", role: "MEMBER" } });
+    mockResolveAccessibleProjectIds.mockResolvedValue(["p1"]);
     mockAggregate.mockResolvedValue({
       _count: { id: 50 },
       _sum: { promptTokens: 30000, completionTokens: 60000, totalTokens: 90000, costCents: 18 },

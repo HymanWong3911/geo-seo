@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 interface Props {
   children: ReactNode;
@@ -24,16 +25,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // 上报错误到 Sentry（如果已初始化）
-    if (typeof window !== "undefined" && window.Sentry) {
-      window.Sentry.captureException(error, {
-        contexts: {
-          react: {
-            componentStack: errorInfo.componentStack,
-          },
+    Sentry.captureException(error, {
+      contexts: {
+        react: {
+          componentStack: errorInfo.componentStack,
         },
-      });
-    }
+      },
+    });
     
     this.props.onError?.(error, errorInfo);
   }
@@ -80,14 +78,5 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     return this.props.children;
-  }
-}
-
-// 扩展 Window 类型以支持 Sentry 全局对象
-declare global {
-  interface Window {
-    Sentry?: {
-      captureException: (error: Error, options?: object) => void;
-    };
   }
 }

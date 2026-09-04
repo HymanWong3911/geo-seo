@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/mailer";
 import { redis } from "@/lib/queue";
 import type { AlertEventType, JobStatus } from "@prisma/client";
+import { outboundFetch, parseHostAllowlist } from "@/lib/http/outbound";
 
 interface SendAlertInput {
   eventType: AlertEventType;
@@ -22,7 +23,7 @@ async function isDuplicate(key: string): Promise<boolean> {
 
 async function sendFeishu(webhookUrl: string, payload: Record<string, unknown>): Promise<boolean> {
   try {
-    const res = await fetch(webhookUrl, {
+    const res = await outboundFetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -36,7 +37,7 @@ async function sendFeishu(webhookUrl: string, payload: Record<string, unknown>):
           ],
         },
       }),
-    });
+    }, alertWebhookPolicy());
     return res.ok;
   } catch (err) {
     console.error("[alert:feishu]", err);
@@ -46,14 +47,14 @@ async function sendFeishu(webhookUrl: string, payload: Record<string, unknown>):
 
 async function sendWeCom(webhookUrl: string, payload: Record<string, unknown>): Promise<boolean> {
   try {
-    const res = await fetch(webhookUrl, {
+    const res = await outboundFetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         msgtype: "markdown",
         markdown: { content: formatMarkdown(payload) },
       }),
-    });
+    }, alertWebhookPolicy());
     return res.ok;
   } catch (err) {
     console.error("[alert:wecom]", err);
@@ -68,11 +69,11 @@ async function sendSlack(webhookUrl: string, payload: Record<string, unknown>): 
       { type: "header", text: { type: "plain_text", text: `📊 ${payload.title ?? "GEO 告警"}` } },
       { type: "section", text: { type: "mrkdwn", text: formatMarkdown(payload) } },
     ];
-    const res = await fetch(webhookUrl, {
+    const res = await outboundFetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ blocks }),
-    });
+    }, alertWebhookPolicy());
     return res.ok;
   } catch (err) {
     console.error("[alert:slack]", err);
@@ -88,6 +89,16 @@ function formatMarkdown(p: Record<string, unknown>): string {
     lines.push(`- ${k}: ${v}`);
   }
   return lines.join("\n");
+}
+
+function alertWebhookPolicy() {
+  return {
+    validateUrl: true,
+    allowHttp: process.env.ALERT_WEBHOOK_ALLOW_HTTP === "true",
+    allowPrivate: process.env.ALERT_WEBHOOK_ALLOW_PRIVATE_HOSTS === "true",
+    allowedHosts: parseHostAllowlist(process.env.ALERT_WEBHOOK_ALLOWLIST),
+    maxRedirects: 0,
+  } as const;
 }
 
 export async function sendAlert(input: SendAlertInput): Promise<void> {

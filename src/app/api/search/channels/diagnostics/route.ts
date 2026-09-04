@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAllChannelsDiagnostics, type SearchProviderName } from "@/lib/search";
+import { requireAdmin } from "@/lib/api/auth";
 
 export async function GET() {
   try {
+    await requireAdmin();
     const diagnostics = getAllChannelsDiagnostics();
     
     // 简化输出，移除 lastChecked（JSON 序列化问题）

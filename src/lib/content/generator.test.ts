@@ -33,6 +33,7 @@ describe("generateContent", () => {
 
     expect(r.title).toBe("T");
     expect(r.outline).toEqual(["a", "b"]);
+    expect(r.provenance).toMatchObject({ kind: "llm", provider: "test", synthetic: false });
   });
 
   it("recovers from LLM wrapping JSON in markdown fences", async () => {
@@ -43,6 +44,19 @@ describe("generateContent", () => {
 
     const r = await generateContent({ topic: "x", targetKeywords: ["k"], brandName: "B" });
     expect(r.title).toBe("T");
+  });
+
+  it("marks template fallback content as synthetic", async () => {
+    mockComplete.mockResolvedValue("not-json");
+
+    const r = await generateContent({ topic: "x", targetKeywords: ["k"], brandName: "B" });
+
+    expect(r.provenance).toMatchObject({
+      kind: "template-fallback",
+      provider: "test",
+      synthetic: true,
+    });
+    expect(r.provenance.reason).toContain("attempt 2");
   });
 });
 

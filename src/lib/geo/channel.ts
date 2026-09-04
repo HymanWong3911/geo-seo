@@ -32,6 +32,32 @@ export async function runGeoQuestion(
 
   const meta = { projectId, geoRunId, geoQuestionId: questionId };
 
+  // CI/本地离线模式必须完全绕过已配置的真实渠道。否则宿主 .env 中只要
+  // 存在 Kimi/ARK 等密钥，测试虽然使用 mock LLM，结果仍会被错误标成
+  // 真实搜索并污染正式指标。
+  if (process.env.GEO_RUN_MOCK_LLM === "true") {
+    const mockProvider = getSearchProvider("llm_simulation");
+    const result = await mockProvider.search(questionText, {
+      language,
+      region,
+      maxAnswerChars: parseInt(process.env.GEO_ANSWER_MAX_CHARS ?? "8000"),
+      meta,
+    });
+    return {
+      result: {
+        ...result,
+        provenance: {
+          kind: "llm-simulation",
+          provider: result.provenance?.provider ?? "mock",
+          synthetic: true,
+          reason: "configured",
+        },
+      },
+      provider: "llm_simulation",
+      attempts: 1,
+    };
+  }
+
   // 优先级：项目配置的渠道 ∩ 实际可用的渠道（已配 key）
   // 没配 key 的渠道会被跳过（避免进入 5 次重试 + 7.5 分钟退避）
   const configured = project.geoChannels.length > 0
@@ -53,7 +79,21 @@ export async function runGeoQuestion(
       maxAnswerChars: parseInt(process.env.GEO_ANSWER_MAX_CHARS ?? "8000"),
       meta,
     });
-    return { result, provider: "llm_simulation", attempts: 0 };
+    return {
+      result: {
+        ...result,
+        provenance: {
+          ...(result.provenance ?? {
+            kind: "llm-simulation",
+            provider: "unknown",
+            synthetic: true,
+          }),
+          reason: "no-channel",
+        },
+      },
+      provider: "llm_simulation",
+      attempts: 0,
+    };
   }
 
   for (const channelName of channels) {
@@ -67,7 +107,19 @@ export async function runGeoQuestion(
           maxAnswerChars: parseInt(process.env.GEO_ANSWER_MAX_CHARS ?? "8000"),
           meta,
         });
-        return { result, provider: channelName, attempts: attempt };
+        return {
+          result: {
+            ...result,
+            provenance: result.provenance ?? {
+              kind: "real-search",
+              provider: channelName,
+              synthetic: false,
+              reason: "configured",
+            },
+          },
+          provider: channelName,
+          attempts: attempt,
+        };
       } catch (err) {
         if (attempt === 5) break;
         await sleep(BACKOFF_MS[attempt - 1]);
@@ -86,5 +138,19 @@ export async function runGeoQuestion(
     maxAnswerChars: parseInt(process.env.GEO_ANSWER_MAX_CHARS ?? "8000"),
     meta,
   });
-  return { result, provider: "llm_simulation", attempts: 0 };
+  return {
+    result: {
+      ...result,
+      provenance: {
+        ...(result.provenance ?? {
+          kind: "llm-simulation",
+          provider: "unknown",
+          synthetic: true,
+        }),
+        reason: "channels-failed",
+      },
+    },
+    provider: "llm_simulation",
+    attempts: 0,
+  };
 }

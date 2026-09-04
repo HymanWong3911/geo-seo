@@ -3,7 +3,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireProjectEditor, requireSession } from "@/lib/api/auth";
 import { audit } from "@/lib/audit/logger";
 import { Errors, handleError, created } from "@/lib/api/response";
 
@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { sourceId, newName, newDomain } = parsed.data;
+
+    await requireProjectEditor(session.user.id, session.user.role, sourceId);
 
     // 读取源项目
     const source = await prisma.project.findUnique({ where: { id: sourceId } });

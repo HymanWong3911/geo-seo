@@ -8,8 +8,9 @@ export class LlmSimulationProvider implements RealSearchProvider {
   name = "llm_simulation" as const;
 
   isAvailable(): boolean {
-    // 只要有任意 LLM API key 就能用
-    return Boolean(process.env.LLM_API_KEY) ||
+    // 显式 mock 模式无需任何外部 API key。
+    return process.env.GEO_RUN_MOCK_LLM === "true" ||
+           Boolean(process.env.LLM_API_KEY) ||
            Boolean(process.env.OPENAI_API_KEY) ||
            Boolean(process.env.ARK_API_KEY) ||
            Boolean(process.env.ANTHROPIC_API_KEY);
@@ -22,7 +23,7 @@ export class LlmSimulationProvider implements RealSearchProvider {
     const hasArkKey = Boolean(process.env.ARK_API_KEY);
     const hasAnthropicKey = Boolean(process.env.ANTHROPIC_API_KEY);
     
-    if (!hasLlmKey && !hasOpenAiKey && !hasArkKey && !hasAnthropicKey) {
+    if (process.env.GEO_RUN_MOCK_LLM !== "true" && !hasLlmKey && !hasOpenAiKey && !hasArkKey && !hasAnthropicKey) {
       missing.push("LLM_API_KEY (or OPENAI_API_KEY, ARK_API_KEY, ANTHROPIC_API_KEY)");
     }
     
@@ -65,6 +66,11 @@ ${options.region ? `地区：${options.region}` : ""}
         citations: [],
         raw: { provider: llm.name, durationMs: Date.now() - start },
         durationMs: Date.now() - start,
+        provenance: {
+          kind: "llm-simulation",
+          provider: llm.name,
+          synthetic: true,
+        },
       };
     } catch (err) {
       throw new Error(`LLM simulation failed: ${err instanceof Error ? err.message : String(err)}`);

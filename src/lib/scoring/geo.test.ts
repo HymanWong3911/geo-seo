@@ -30,6 +30,8 @@ describe("calculateProjectGeoMetrics", () => {
     // 无数据时，calculateScore 中 totalQuestions === 0 直接返回 0
     expect(m.score).toBe(0);
     expect(m.brandMentioned).toBe(0);
+    expect(mockFindMany.mock.calls[0][0].where.isSynthetic).toBe(false);
+    expect(mockFindMany.mock.calls[1][0].where.isSynthetic).toBe(false);
   });
 
   it("computes high score when brand well-mentioned", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ProjectSelector } from "@/components/forms/ProjectSelector";
@@ -20,6 +20,7 @@ interface GeoRun {
   errorMessage: string | null;
   createdAt: string;
   _count: { results: number };
+  results: Array<{ providerSource: string; isSynthetic: boolean; createdAt: string }>;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -75,7 +76,7 @@ export default function GeoRunsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [providerFilter, setProviderFilter] = useState<string>("");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!projectId) { setRuns([]); return; }
     setLoading(true);
     const url = new URL(`/api/projects/${projectId}/geo/runs`, window.location.origin);
@@ -84,13 +85,13 @@ export default function GeoRunsPage() {
     const json = await res.json();
     setRuns(json.data ?? []);
     setLoading(false);
-  }
+  }, [projectId]);
 
-  useEffect(() => { void load(); }, [projectId]);
+  useEffect(() => { void load(); }, [load]);
 
   const filtered = useMemo(() => runs.filter(r => {
     if (statusFilter && r.status !== statusFilter) return false;
-    if (providerFilter && r.provider !== providerFilter) return false;
+    if (providerFilter && !r.results.some((result) => result.providerSource === providerFilter)) return false;
     return true;
   }), [runs, statusFilter, providerFilter]);
 
@@ -122,7 +123,11 @@ export default function GeoRunsPage() {
   // Provider 柱图
   const providerBreakdown = useMemo(() => {
     const m = new Map<string, number>();
-    for (const r of runs) m.set(r.provider, (m.get(r.provider) ?? 0) + 1);
+    for (const r of runs) {
+      for (const result of r.results) {
+        m.set(result.providerSource, (m.get(result.providerSource) ?? 0) + 1);
+      }
+    }
     return Array.from(m.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([p, v]) => ({ label: PROVIDER_LABELS[p] ?? p, value: v }));
@@ -255,7 +260,9 @@ export default function GeoRunsPage() {
               >
                 <option value="">all_providers</option>
                 {providerBreakdown.map(p => (
-                  <option key={p.label} value={p.label.split(" ").pop() ?? ""}>{p.label}</option>
+                  <option key={p.label} value={Object.entries(PROVIDER_LABELS).find(([, label]) => label === p.label)?.[0] ?? p.label}>
+                    {p.label}
+                  </option>
                 ))}
               </select>
             )}
@@ -304,8 +311,14 @@ export default function GeoRunsPage() {
                             <span className="text-xs font-mono">{r.triggerType}</span>
                           </td>
                           <td className="p-3">
-                            <div className="text-xs font-mono">{PROVIDER_LABELS[r.provider] ?? r.provider}</div>
-                            <div className="text-[10px] font-mono text-muted-foreground">{r.model}</div>
+                            <div className="text-xs font-mono">
+                              {Array.from(new Set(r.results.map((result) => PROVIDER_LABELS[result.providerSource] ?? result.providerSource))).join(", ") || "—"}
+                            </div>
+                            <div className="text-[10px] font-mono text-muted-foreground">
+                              {r.results.some((result) => result.isSynthetic)
+                                ? `含 ${r.results.filter((result) => result.isSynthetic).length} 条模拟结果`
+                                : r.model}
+                            </div>
                           </td>
                           <td className="p-3 text-right font-mono text-xs">{r.questionIds.length}</td>
                           <td className="p-3 text-right font-mono text-xs text-primary">{r._count.results}</td>

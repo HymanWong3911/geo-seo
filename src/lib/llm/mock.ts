@@ -2,8 +2,7 @@
 //
 // 触发方式:
 //   export GEO_RUN_MOCK_LLM=true
-// 然后 getLLMProvider() 默认走这个 provider,不影响 llm_simulation.search / analyzeWithLLM
-// 任何其它 LLM 调用。
+// 然后 GEO 渠道固定走 llm_simulation，且 getLLMProvider() 默认使用本 provider。
 //
 // 用法:
 //   - dev / CI / 本地调试:开启后 search 返回含项目主品牌名的"答案",

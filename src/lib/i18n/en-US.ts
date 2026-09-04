@@ -108,7 +108,6 @@ export const enUS = {
     errorTitle: "auth_failed",
     errorHint: "verify credentials & retry",
     forgotLink: "recover →",
-    defaultAdminHint: "default admin@example.com / Admin@2026",
     brandSlogan: "Search Visibility Operations · at Scale",
   },
 

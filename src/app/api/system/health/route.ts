@@ -4,7 +4,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireAdmin } from "@/lib/api/auth";
 import { handleError, success } from "@/lib/api/response";
 import { Queue } from "bullmq";
 import { connection } from "@/lib/queue";
@@ -17,17 +17,15 @@ const QUEUE_NAMES = [
   "geo-run",
   "page-audit",
   "content-analysis",
-  "report",
+  "report-generation",
   "scheduler",
-  "retention",
   "cms-publish",
   "distribution",
-  "alert-sender",
 ];
 
 export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    await requireAdmin();
     const url = new URL(req.url);
     const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams));
     if (!parsed.success) {

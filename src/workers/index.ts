@@ -7,27 +7,25 @@
 // 这是为什么 load-env 必须放在第一个 import:
 import "./load-env";
 
-import { pageAuditWorker } from "./pageAuditWorker";
-import { geoRunWorker } from "./geoRunWorker";
-import { contentAnalysisWorker } from "./contentAnalysisWorker";
-import { reportWorker } from "./reportWorker";
-import { schedulerWorker } from "./schedulerWorker";
-import { retentionWorker } from "./retentionWorker";
-import { cmsPublisherWorker, publishDraft } from "./cmsPublisherWorker";
-import { distributionWorker } from "./distributionWorker";
+import { createPageAuditWorker } from "./pageAuditWorker";
+import { createGeoRunWorker } from "./geoRunWorker";
+import { createContentAnalysisWorker } from "./contentAnalysisWorker";
+import { createReportWorker } from "./reportWorker";
+import { createSchedulerWorker } from "./schedulerWorker";
+import { createCmsPublisherWorker } from "./cmsPublisherWorker";
+import { createDistributionWorker } from "./distributionWorker";
 import { setupScheduler } from "@/lib/queue/scheduler";
 import { prisma } from "@/lib/db";
 import { monitorBrand } from "@/lib/brand/monitor";
 
 const workers = {
-  pageAudit: pageAuditWorker,
-  geoRun: geoRunWorker,
-  contentAnalysis: contentAnalysisWorker,
-  report: reportWorker,
-  scheduler: schedulerWorker,
-  retention: retentionWorker,
-  cmsPublish: cmsPublisherWorker,
-  distribution: distributionWorker,
+  pageAudit: createPageAuditWorker(),
+  geoRun: createGeoRunWorker(),
+  contentAnalysis: createContentAnalysisWorker(),
+  report: createReportWorker(),
+  scheduler: createSchedulerWorker(),
+  cmsPublish: createCmsPublisherWorker(),
+  distribution: createDistributionWorker(),
 };
 
 console.log(

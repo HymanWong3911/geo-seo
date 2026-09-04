@@ -6,6 +6,7 @@
 import { diffWords, type Change } from "diff";
 import { getLLMProvider } from "@/lib/llm";
 import type { Finding } from "@/lib/seo/analyzer";
+import type { ContentProvenance } from "./generator";
 
 export interface RewriteInput {
   originalContent: string;
@@ -28,6 +29,7 @@ export interface RewriteResult {
   appliedFindingCodes: string[];
   newWordCount: number;
   newFindingsEstimate: Finding[];
+  provenance: ContentProvenance;
 }
 
 const REWRITE_PROMPT = `你是一名内容优化专家。请基于 SEO 诊断建议改写下面的内容，保留原意但修复问题。
@@ -98,5 +100,11 @@ export async function rewriteContent(input: RewriteInput): Promise<RewriteResult
     appliedFindingCodes: out.appliedFindingCodes ?? [],
     newWordCount: out.rewritten.length,
     newFindingsEstimate: [],  // 改写后问题估算需要再跑 SEO analyzer，这里留空
+    provenance: {
+      kind: llm.name === "mock" ? "mock" : "llm",
+      provider: llm.name,
+      synthetic: llm.name === "mock",
+      reason: null,
+    },
   };
 }

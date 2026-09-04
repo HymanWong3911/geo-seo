@@ -5,16 +5,13 @@
 // - 导出 + 删除 6 个月前 AuditLog
 // - 归档 12 个月未活跃项目
 
-import { Worker } from "bullmq";
-import { connection } from "@/lib/queue";
 import { prisma } from "@/lib/db";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
-import type { SchedulerJob } from "@/lib/queue/scheduler";
 
 const RETENTION_DIR = process.env.RETENTION_EXPORT_DIR ?? "./backups/retention";
 
-async function runRetentionCleanup() {
+export async function runRetentionCleanup() {
   console.log("[retention] starting cleanup...");
   const now = new Date();
   const monthAgo = new Date(now);
@@ -110,13 +107,3 @@ async function runRetentionCleanup() {
 
   console.log("[retention] cleanup done");
 }
-
-export const retentionWorker = new Worker<SchedulerJob>(
-  "scheduler",
-  async (job) => {
-    if (job.data.type === "retention-cleanup") {
-      await runRetentionCleanup();
-    }
-  },
-  { connection, concurrency: 1 },
-);

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -34,8 +35,14 @@ export default function RootLayout({
           <div className="relative z-10 flex min-h-screen">
             <Sidebar />
             <div className="flex min-w-0 flex-1 flex-col">
-              <Topbar />
-              <main className="flex-1 px-10 py-10">{children}</main>
+              <Suspense fallback={<div className="h-14 border-b border-border" />}>
+                <Topbar />
+              </Suspense>
+              <main className="flex-1 px-10 py-10">
+                <Suspense fallback={<div className="text-sm text-muted-foreground">加载中...</div>}>
+                  {children}
+                </Suspense>
+              </main>
             </div>
           </div>
         </Providers>

@@ -45,6 +45,7 @@ async function getLlmCostTrend(projectIds: string[]) {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000);
   const calls = await prisma.llmCall.findMany({
     where: {
+      projectId: { in: projectIds },
       createdAt: { gte: thirtyDaysAgo },
     },
     select: { createdAt: true, costCents: true },
@@ -112,6 +113,7 @@ export async function GET(_req: NextRequest) {
       }),
       prisma.llmCall.aggregate({
         where: {
+          projectId: { in: projectIds },
           createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
         },
         _sum: { costCents: true },

@@ -4,8 +4,9 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireSession, resolveAccessibleProjectIds } from "@/lib/api/auth";
 import { handleError, success } from "@/lib/api/response";
+import { Prisma } from "@prisma/client";
 
 const querySchema = z.object({
   days: z.coerce.number().int().min(1).max(90).default(30),
@@ -16,7 +17,7 @@ const DAY = 24 * 3600 * 1000;
 
 export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    const session = await requireSession();
     const url = new URL(req.url);
     const parsed = querySchema.safeParse({
       days: url.searchParams.get("days") ?? undefined,
@@ -27,25 +28,27 @@ export async function GET(req: NextRequest) {
     }
     const { days, projectId } = parsed.data;
     const since = new Date(Date.now() - days * DAY);
+    const projectIds = await resolveAccessibleProjectIds(
+      session.user.id,
+      session.user.role,
+      projectId,
+    );
+
+    if (projectIds.length === 0) {
+      return success({
+        range: { days, since: since.toISOString() },
+        totals: { mentions: 0, avgRelevance: 0, last24h: 0 },
+        byDay: [],
+        topBrands: [],
+        sentiment: { positive: 0, neutral: 0, negative: 0, mixed: 0 },
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // 按天分桶 brand mention 数量 + sentiment
     // 2026-07-25:用普通 SQL 字符串 + 参数化。Prisma.$queryRaw 的 tagged template
     // 跟动态条件拼接有 TS parser 兼容问题,所以 Prisma.sql + $queryRawUnsafe 路径。
-    const whereClause = projectId
-      ? `WHERE "discoveredAt" >= $1 AND "projectId" = $2`
-      : `WHERE "discoveredAt" >= $1`;
-    const queryParams: unknown[] = projectId ? [since, projectId] : [since];
-
-    const sqlText = "SELECT DATE_TRUNC('day', \"discoveredAt\") AS day, COUNT(*)::bigint AS total, " +
-      "SUM(CASE WHEN \"sentiment\" = 'positive' THEN 1 ELSE 0 END)::bigint AS positive, " +
-      "SUM(CASE WHEN \"sentiment\" = 'neutral'  THEN 1 ELSE 0 END)::bigint AS neutral, " +
-      "SUM(CASE WHEN \"sentiment\" = 'negative' THEN 1 ELSE 0 END)::bigint AS negative, " +
-      "SUM(CASE WHEN \"mentionType\" = 'primary_brand' THEN 1 ELSE 0 END)::bigint AS primary, " +
-      "SUM(CASE WHEN \"mentionType\" = 'competitor'    THEN 1 ELSE 0 END)::bigint AS competitor " +
-      `FROM "BrandMention" ${whereClause} ` +
-      "GROUP BY DATE_TRUNC('day', \"discoveredAt\") ORDER BY day ASC";
-
-    const rows = (await prisma.$queryRawUnsafe<Array<{
+    const rows = await prisma.$queryRaw<Array<{
       day: Date;
       total: bigint;
       positive: bigint;
@@ -53,20 +56,25 @@ export async function GET(req: NextRequest) {
       negative: bigint;
       primary: bigint;
       competitor: bigint;
-    }>>(sqlText, ...queryParams)) as unknown as Array<{
-      day: Date;
-      total: bigint;
-      positive: bigint;
-      neutral: bigint;
-      negative: bigint;
-      primary: bigint;
-      competitor: bigint;
-    }>;
+    }>>(Prisma.sql`
+      SELECT DATE_TRUNC('day', "discoveredAt") AS day,
+        COUNT(*)::bigint AS total,
+        SUM(CASE WHEN "sentiment" = 'positive' THEN 1 ELSE 0 END)::bigint AS positive,
+        SUM(CASE WHEN "sentiment" = 'neutral' THEN 1 ELSE 0 END)::bigint AS neutral,
+        SUM(CASE WHEN "sentiment" = 'negative' THEN 1 ELSE 0 END)::bigint AS negative,
+        SUM(CASE WHEN "mentionType" = 'primary_brand' THEN 1 ELSE 0 END)::bigint AS primary,
+        SUM(CASE WHEN "mentionType" = 'competitor' THEN 1 ELSE 0 END)::bigint AS competitor
+      FROM "BrandMention"
+      WHERE "discoveredAt" >= ${since}
+        AND "projectId" IN (${Prisma.join(projectIds)})
+      GROUP BY DATE_TRUNC('day', "discoveredAt")
+      ORDER BY day ASC
+    `);
 
     // 当前快照(总数 + 24h)
     const where = {
       discoveredAt: { gte: since },
-      ...(projectId ? { projectId } : {}),
+      projectId: { in: projectIds },
     };
     const [totals, last24h, byBrand, bySentiment] = await Promise.all([
       prisma.brandMention.aggregate({
@@ -75,7 +83,10 @@ export async function GET(req: NextRequest) {
         _sum: { relevanceScore: true },
       }),
       prisma.brandMention.count({
-        where: { discoveredAt: { gte: new Date(Date.now() - DAY) } },
+        where: {
+          discoveredAt: { gte: new Date(Date.now() - DAY) },
+          projectId: { in: projectIds },
+        },
       }),
       prisma.brandMention.groupBy({
         by: ["brandName"],

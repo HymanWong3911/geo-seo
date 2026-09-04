@@ -113,7 +113,6 @@ export const zhCN = {
     errorTitle: "认证失败",
     errorHint: "请核对账号密码后重试",
     forgotLink: "找回密码 →",
-    defaultAdminHint: "默认 admin@example.com / Admin@2026",
     brandSlogan: "搜索可见度 · 规模化运营",
   },
 

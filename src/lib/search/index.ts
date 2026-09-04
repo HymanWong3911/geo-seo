@@ -28,6 +28,14 @@ export interface SearchResult {
   citations: string[];
   raw?: unknown;
   durationMs: number;
+  provenance?: SearchProvenance;
+}
+
+export interface SearchProvenance {
+  kind: "real-search" | "llm-simulation";
+  provider: string;
+  synthetic: boolean;
+  reason?: "no-channel" | "channels-failed" | "configured";
 }
 
 export interface RealSearchProvider {

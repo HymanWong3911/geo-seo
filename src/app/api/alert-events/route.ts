@@ -1,13 +1,13 @@
 // 告警事件历史。
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireAdmin } from "@/lib/api/auth";
 import { handleError, paginated } from "@/lib/api/response";
 import { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    await requireAdmin();
 
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get("page") ?? "1");

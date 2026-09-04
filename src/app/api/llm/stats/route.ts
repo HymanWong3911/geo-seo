@@ -3,8 +3,9 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api/auth";
+import { requireSession, resolveAccessibleProjectIds } from "@/lib/api/auth";
 import { handleError, success } from "@/lib/api/response";
+import { Prisma } from "@prisma/client";
 
 const querySchema = z.object({
   projectId: z.string().optional(),
@@ -14,7 +15,7 @@ const querySchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    const session = await requireSession();
     const url = new URL(req.url);
     const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams));
     if (!parsed.success) {
@@ -23,9 +24,14 @@ export async function GET(req: NextRequest) {
     const { projectId, days, groupBy } = parsed.data;
 
     const since = new Date(Date.now() - days * 24 * 3600 * 1000);
+    const projectIds = await resolveAccessibleProjectIds(
+      session.user.id,
+      session.user.role,
+      projectId,
+    );
     const where = {
       createdAt: { gte: since },
-      ...(projectId ? { projectId } : {}),
+      projectId: { in: projectIds },
     };
 
     const [totals, grouped, byDay, recent] = await Promise.all([
@@ -44,7 +50,9 @@ export async function GET(req: NextRequest) {
         orderBy: { _count: { id: "desc" } },
       }),
       // 按天聚合最近 N 天
-      prisma.$queryRaw<Array<{ day: Date; calls: bigint; tokens: bigint; cost: number }>>`
+      projectIds.length === 0
+        ? Promise.resolve([])
+        : prisma.$queryRaw<Array<{ day: Date; calls: bigint; tokens: bigint; cost: number }>>(Prisma.sql`
         SELECT
           DATE_TRUNC('day', "createdAt") AS day,
           COUNT(*) AS calls,
@@ -52,9 +60,10 @@ export async function GET(req: NextRequest) {
           COALESCE(SUM("costCents"), 0)::float AS cost
         FROM "LlmCall"
         WHERE "createdAt" >= ${since}
+          AND "projectId" IN (${Prisma.join(projectIds)})
         GROUP BY DATE_TRUNC('day', "createdAt")
         ORDER BY day DESC
-      `,
+      `),
       prisma.llmCall.findMany({
         where,
         orderBy: { createdAt: "desc" },

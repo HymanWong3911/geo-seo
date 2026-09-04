@@ -7,16 +7,22 @@ export interface SchedulerJob {
   type: "daily-geo-monitor" | "daily-summary" | "retention-cleanup";
 }
 
-export const schedulerQueue = new Queue<SchedulerJob>("scheduler", {
-  connection,
-  defaultJobOptions: {
-    removeOnComplete: { age: 7 * 24 * 3600, count: 100 },
-    removeOnFail: { age: 30 * 24 * 3600 },
-  },
-});
+let queue: Queue<SchedulerJob> | undefined;
+
+function getSchedulerQueue() {
+  queue ??= new Queue<SchedulerJob>("scheduler", {
+    connection,
+    defaultJobOptions: {
+      removeOnComplete: { age: 7 * 24 * 3600, count: 100 },
+      removeOnFail: { age: 30 * 24 * 3600 },
+    },
+  });
+  return queue;
+}
 
 // 每日 00:30 触发 GEO 监测
 export async function setupScheduler() {
+  const schedulerQueue = getSchedulerQueue();
   await schedulerQueue.add(
     "daily-geo-monitor",
     { type: "daily-geo-monitor" },

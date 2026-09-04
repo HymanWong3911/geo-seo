@@ -1,18 +1,19 @@
 // 端到端 GEO 监测流程测试。
 // 覆盖：登录 → 创建关键词/问题/品牌 → 触发 GEO run → worker 跑 → 验证结果落库 → 计算 metrics
 //
-// 跑法：需 worker 进程运行 + 真实 LLM API（MiniMax 配置好）。
-// 跳过条件：未配置 LLM_API_KEY 时跳过整个文件。
+// 跑法：需 web + worker 进程运行；CI 使用确定性的 GEO_RUN_MOCK_LLM。
+// 本地未配置真实 LLM 或 mock 时可显式跳过，CI 缺配置则直接失败。
 //
 // 用 vitest + node-fetch，无需启 dev server。
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const BASE = process.env.APP_BASE_URL ?? "http://localhost:3010";
-const HAS_LLM = Boolean(process.env.LLM_API_KEY);
-const SKIP_REASON = !HAS_LLM
-  ? "需配置 LLM_API_KEY 才能跑端到端测试"
-  : "其他原因跳过";
+const HAS_LLM = process.env.GEO_RUN_MOCK_LLM === "true" || Boolean(process.env.LLM_API_KEY);
+
+if (process.env.CI === "true" && !HAS_LLM) {
+  throw new Error("CI E2E 必须配置 GEO_RUN_MOCK_LLM=true 或 LLM_API_KEY");
+}
 
 const describeMaybe = HAS_LLM ? describe : describe.skip;
 
@@ -24,6 +25,7 @@ describeMaybe("E2E: GEO 监测完整流程", () => {
   let brandId = "";
   let runId = "";
   let resultCount = 0;
+  let initialMetricQuestions = 0;
 
   // 工具：登录
   async function login() {
@@ -35,8 +37,8 @@ describeMaybe("E2E: GEO 监测完整流程", () => {
 
     // 2. POST 登录
     const params = new URLSearchParams({
-      email: "admin@example.com",
-      password: "Admin@2026",
+      email: process.env.E2E_ADMIN_EMAIL ?? "admin@example.com",
+      password: process.env.E2E_ADMIN_PASSWORD ?? "",
       csrfToken,
       callbackUrl: `${BASE}/dashboard`,
     });
@@ -101,6 +103,8 @@ describeMaybe("E2E: GEO 监测完整流程", () => {
     const projects = await api("/api/projects?pageSize=100");
     projectId = (projects.data as Array<{ id: string }>)[0]?.id ?? "";
     expect(projectId).toBeTruthy();
+    const metrics = await api(`/api/projects/${projectId}/geo/metrics`);
+    initialMetricQuestions = (metrics.data as { totalQuestions: number }).totalQuestions;
   }, 30_000);
 
   afterAll(async () => {
@@ -206,6 +210,7 @@ describeMaybe("E2E: GEO 监测完整流程", () => {
         answer: string;
         mentionedBrands: string[];
         providerSource: string;
+        isSynthetic: boolean;
       }>;
     };
     expect(run.results.length).toBe(resultCount);
@@ -213,12 +218,20 @@ describeMaybe("E2E: GEO 监测完整流程", () => {
     expect(run.results[0].answer.length).toBeGreaterThan(10);
     // provider 任意：llm_simulation / kimi / doubao / perplexity
     expect(run.results[0].providerSource).toMatch(/llm_simulation|kimi|doubao|perplexity/);
+    if (process.env.GEO_RUN_MOCK_LLM === "true") {
+      expect(run.results[0].providerSource).toBe("llm_simulation");
+      expect(run.results[0].isSynthetic).toBe(true);
+    }
   });
 
-  it("M4: 验证 GEO metrics 反映新数据", async () => {
+  it("M4: 验证模拟结果不会污染正式 GEO metrics", async () => {
     const r = await api(`/api/projects/${projectId}/geo/metrics`);
     const m = r.data as { totalQuestions: number; score: number };
-    expect(m.totalQuestions).toBeGreaterThan(0);
+    if (process.env.GEO_RUN_MOCK_LLM === "true") {
+      expect(m.totalQuestions).toBe(initialMetricQuestions);
+    } else {
+      expect(m.totalQuestions).toBeGreaterThanOrEqual(initialMetricQuestions);
+    }
     expect(m.score).toBeGreaterThanOrEqual(0);
     expect(m.score).toBeLessThanOrEqual(100);
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -135,18 +135,12 @@ export default function InsightsPage() {
         const j = await r.json();
         const list: Project[] = j.data ?? [];
         setProjects(list);
-        if (!selectedProject && list.length > 0) {
-          setSelectedProject(list[0].id);
-        }
+        setSelectedProject((current) => current || list[0]?.id || "");
       }
     })();
   }, []);
 
-  useEffect(() => {
-    if (selectedProject) void load(false);
-  }, [selectedProject]);
-
-  async function load(forceRefresh: boolean) {
+  const load = useCallback(async (forceRefresh: boolean) => {
     if (!selectedProject) return;
     setLoading(true);
     setError(null);
@@ -165,7 +159,7 @@ export default function InsightsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedProject]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -175,6 +169,10 @@ export default function InsightsPage() {
       setRefreshing(false);
     }
   }
+
+  useEffect(() => {
+    if (selectedProject) void load(false);
+  }, [selectedProject, load]);
 
   const sourceBadge = useMemo(() => {
     if (!insights) return null;

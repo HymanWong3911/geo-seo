@@ -5,6 +5,12 @@
 //       返回 errors[] 让上层能区分 network/TLS/timeout 等失败原因。
 
 import type { PerformanceData } from "@/lib/seo/analyzer";
+import {
+  assertSafeOutboundUrl,
+  outboundFetch,
+  parseHostAllowlist,
+  type OutboundUrlPolicy,
+} from "@/lib/http/outbound";
 
 export interface CrawlError {
   phase: "playwright" | "fetch";
@@ -48,9 +54,21 @@ function classifyError(message: string): CrawlError["kind"] {
   return "other";
 }
 
-async function crawlWithPlaywright(url: string): Promise<CrawlResult> {
+function crawlerPolicy(): OutboundUrlPolicy {
+  return {
+    allowHttp: true,
+    allowPrivate: process.env.CRAWLER_ALLOW_PRIVATE_HOSTS === "true",
+    allowedHosts: parseHostAllowlist(process.env.CRAWLER_EGRESS_ALLOWLIST),
+  };
+}
+
+async function crawlWithPlaywright(url: string, policy: OutboundUrlPolicy): Promise<CrawlResult> {
   const { chromium } = await import("playwright");
-  const browser = await chromium.launch({ headless: true });
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  const browser = await chromium.launch({
+    headless: true,
+    ...(executablePath ? { executablePath, args: ["--no-sandbox"] } : {}),
+  });
   const errors: CrawlError[] = [];
   const t0 = Date.now();
   try {
@@ -58,6 +76,19 @@ async function crawlWithPlaywright(url: string): Promise<CrawlResult> {
       userAgent:
         "Mozilla/5.0 (compatible; SearchVisibilityConsole/1.0; +https://example.com/bot)",
       ignoreHTTPSErrors: true,
+    });
+    await context.route("**/*", async (route) => {
+      const requestUrl = route.request().url();
+      if (!requestUrl.startsWith("http://") && !requestUrl.startsWith("https://")) {
+        await route.continue();
+        return;
+      }
+      try {
+        await assertSafeOutboundUrl(requestUrl, policy);
+        await route.continue();
+      } catch {
+        await route.abort("blockedbyclient");
+      }
     });
     const page = await context.newPage();
 
@@ -142,18 +173,26 @@ async function crawlWithPlaywright(url: string): Promise<CrawlResult> {
   }
 }
 
-async function crawlWithFetch(url: string, opts: { ignoreTls?: boolean } = {}): Promise<CrawlResult> {
+async function crawlWithFetch(
+  url: string,
+  policy: OutboundUrlPolicy,
+  opts: { ignoreTls?: boolean } = {},
+): Promise<CrawlResult> {
   const t0 = Date.now();
   const errors: CrawlError[] = [];
   try {
-    const res = await fetch(url, {
+    const res = await outboundFetch(url, {
       redirect: "follow",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: {
         "User-Agent":
           "Mozilla/5.0 (compatible; SearchVisibilityConsole/1.0; +https://example.com/bot)",
       },
-    } as RequestInit);
+    }, {
+      ...policy,
+      validateUrl: true,
+      timeoutMs: TIMEOUT_MS,
+      maxRedirects: 5,
+    });
     const ttfb = Date.now() - t0;
     const html = await res.text();
 
@@ -178,15 +217,17 @@ async function crawlWithFetch(url: string, opts: { ignoreTls?: boolean } = {}): 
 }
 
 export async function crawlPage(url: string): Promise<CrawlResult> {
+  const policy = crawlerPolicy();
+  await assertSafeOutboundUrl(url, policy);
   if (await isPlaywrightAvailable()) {
     try {
-      return await crawlWithPlaywright(url);
+      return await crawlWithPlaywright(url, policy);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[crawler] playwright failed, fallback to fetch:", (err as Error).message?.slice(0, 200));
       // fetch 失败的话，错误链保留在返回里
       try {
-        return await crawlWithFetch(url);
+        return await crawlWithFetch(url, policy);
       } catch (fetchErr) {
         const fetchErrMsg = ((fetchErr as Error).message ?? String(fetchErr)).slice(0, 500);
         const fetchErrKind = classifyError(fetchErrMsg);
@@ -194,7 +235,7 @@ export async function crawlPage(url: string): Promise<CrawlResult> {
         let httpFallback: Awaited<ReturnType<typeof crawlWithFetch>> | null = null;
         if (url.startsWith("https://")) {
           try {
-            httpFallback = await crawlWithFetch(url.replace(/^https:/, "http:"));
+            httpFallback = await crawlWithFetch(url.replace(/^https:/, "http:"), policy);
           } catch (httpErr) {
             // http 也挂了，继续到下面的失败分支
             httpFallback = null;
@@ -228,5 +269,5 @@ export async function crawlPage(url: string): Promise<CrawlResult> {
       }
     }
   }
-  return crawlWithFetch(url);
+  return crawlWithFetch(url, policy);
 }

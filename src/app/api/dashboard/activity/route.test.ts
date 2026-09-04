@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockFindMany = vi.fn();
 const mockRequireSession = vi.fn();
+const mockResolveAccessibleProjectIds = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -15,6 +16,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/api/auth", () => ({
   requireSession: (...a: unknown[]) => mockRequireSession(...a),
+  resolveAccessibleProjectIds: (...a: unknown[]) => mockResolveAccessibleProjectIds(...a),
 }));
 
 vi.mock("@/lib/api/response", () => ({
@@ -32,7 +34,9 @@ describe("GET /api/dashboard/activity", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
     mockRequireSession.mockReset();
-    mockRequireSession.mockResolvedValue({ user: { id: "u1" } });
+    mockResolveAccessibleProjectIds.mockReset();
+    mockRequireSession.mockResolvedValue({ user: { id: "u1", role: "MEMBER" } });
+    mockResolveAccessibleProjectIds.mockResolvedValue(["p1"]);
   });
 
   it("combines GEO runs + audit + LLM calls sorted by time", async () => {
@@ -90,7 +94,8 @@ describe("GET /api/dashboard/activity", () => {
 
     await GET(buildReq("?projectId=p1") as never);
     // 第一次 prisma.geoRun.findMany 调用的 where 应该含 projectId
-    expect(mockFindMany.mock.calls[0][0]).toMatchObject({ where: { projectId: "p1" } });
+    expect(mockResolveAccessibleProjectIds).toHaveBeenCalledWith("u1", "MEMBER", "p1");
+    expect(mockFindMany.mock.calls[0][0]).toMatchObject({ where: { projectId: { in: ["p1"] } } });
   });
 
   it("returns requireSession when not logged in", async () => {

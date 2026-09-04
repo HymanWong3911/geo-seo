@@ -51,12 +51,14 @@ export async function calculateProjectGeoMetrics(projectId: string): Promise<Geo
       where: {
         geoRun: { projectId },
         createdAt: { gte: sevenDaysAgo },
+        isSynthetic: false,
       },
     }),
     prisma.geoRunResult.findMany({
       where: {
         geoRun: { projectId },
         createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo },
+        isSynthetic: false,
       },
     }),
   ]);
