@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type UseEditorOptions } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -13,23 +13,28 @@ interface RichEditorProps {
   editable?: boolean;
 }
 
-export function RichEditor({ content, onChange, placeholder, editable = true }: RichEditorProps) {
-  const editor = useEditor({
+export function createRichEditorOptions({ content, onChange, placeholder, editable = true }: RichEditorProps): UseEditorOptions {
+  return {
     extensions: [
-      StarterKit,
+      StarterKit.configure({ link: false }),
       Link.configure({ openOnClick: false }),
       Placeholder.configure({ placeholder: placeholder ?? "开始写..." }),
     ],
     content,
     editable,
     immediatelyRender: false,  // 解决 SSR 问题
+    shouldRerenderOnTransaction: true,
     onUpdate: ({ editor }) => {
       // 简化：把 HTML 转回 Markdown（粗暴实现：保留 HTML）
       // v1.2 改进：用 turndown 库做 HTML→MD 转换
       // 暂时直接存 HTML 字符串
       onChange(editor.getHTML());
     },
-  });
+  };
+}
+
+export function RichEditor({ content, onChange, placeholder, editable = true }: RichEditorProps) {
+  const editor = useEditor(createRichEditorOptions({ content, onChange, placeholder, editable }));
 
   useEffect(() => {
     return () => {
