@@ -10,8 +10,7 @@ env:
   DATABASE_URL: postgresql://test:test@localhost:5432/geo_seo_test
   REDIS_URL: redis://localhost:6379
   AUTH_SECRET: ci-test-secret-32-bytes-long-1234
-  APP_BASE_URL: http://localhost:3000
-  NODE_ENV: test
+  APP_BASE_URL: http://localhost:3010
 
 jobs:
   # 单元测试 + 类型检查
@@ -34,13 +33,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 11.25.0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
@@ -68,6 +67,9 @@ jobs:
           DATABASE_URL: ${{ env.DATABASE_URL }}
           REDIS_URL: ${{ env.REDIS_URL }}
 
+      - name: Production build
+        run: pnpm build
+
   # E2E 测试
   e2e-test:
     runs-on: ubuntu-latest
@@ -88,20 +90,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 11.25.0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
 
       - name: Generate Prisma client
         run: pnpm prisma generate --schema=src/prisma/schema.prisma
@@ -113,62 +112,56 @@ jobs:
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
-      - name: Start dev server
+      - name: Seed E2E database
+        run: pnpm prisma:seed
+        env:
+          SEED_ADMIN_EMAIL: ci-admin@example.com
+          SEED_ADMIN_PASSWORD: CiAdminPassword-2026
+          SEED_REQUIRE_PASSWORD_CHANGE: "false"
+
+      - name: Run deterministic E2E flow
         run: |
-          pnpm dev &
+          set -euo pipefail
+          pnpm dev > dev.log 2>&1 &
           DEV_PID=$!
-          echo "Dev server PID: $DEV_PID"
-          # 等待服务器启动
+          pnpm worker > worker.log 2>&1 &
+          WORKER_PID=$!
+          trap 'kill "$DEV_PID" "$WORKER_PID" 2>/dev/null || true' EXIT
+
           for i in {1..30}; do
-            if curl -s http://localhost:3010 > /dev/null 2>&1; then
+            if curl --fail --silent http://localhost:3010/api/health > /dev/null; then
               echo "Server is ready"
               break
             fi
             if [ $i -eq 30 ]; then
               echo "Server failed to start"
+              tail -100 dev.log
               exit 1
             fi
             sleep 2
           done
-          sleep 5
-        env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
-          REDIS_URL: ${{ env.REDIS_URL }}
-          AUTH_SECRET: ${{ env.AUTH_SECRET }}
-          APP_BASE_URL: ${{ env.APP_BASE_URL }}
 
-      - name: Start worker
-        run: |
-          pnpm worker &
-          WORKER_PID=$!
-          echo "Worker PID: $WORKER_PID"
-          sleep 10
+          pnpm test:e2e
         env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
-          REDIS_URL: ${{ env.REDIS_URL }}
-          AUTH_SECRET: ${{ env.AUTH_SECRET }}
-          APP_BASE_URL: ${{ env.APP_BASE_URL }}
-
-      - name: Run E2E tests
-        run: pnpm test tests/e2e --reporter=verbose
-        env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
-          REDIS_URL: ${{ env.REDIS_URL }}
-          AUTH_SECRET: ${{ env.AUTH_SECRET }}
-          APP_BASE_URL: ${{ env.APP_BASE_URL }}
+          CI: "true"
+          GEO_RUN_MOCK_LLM: "true"
+          E2E_ADMIN_EMAIL: ci-admin@example.com
+          E2E_ADMIN_PASSWORD: CiAdminPassword-2026
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: e2e-service-logs
+          path: |
+            dev.log
+            worker.log
           retention-days: 7
 
   # Docker 构建
   docker:
     runs-on: ubuntu-latest
-    needs: lint-and-test
+    needs: [lint-and-test, e2e-test]
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     permissions:
       contents: read
@@ -204,7 +197,8 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
-            type=sha,prefix=
+            type=sha,format=long,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push
         uses: docker/build-push-action@v5

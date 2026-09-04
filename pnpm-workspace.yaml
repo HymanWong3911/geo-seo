@@ -1,0 +1,56 @@
+packages:
+  - "."
+
+# pnpm 11 workspace policy and audited transitive security floors.
+overrides:
+  ioredis: 5.10.1
+  undici: 7.29.0
+  linkify-it: 5.0.2
+  fast-uri: 3.1.5
+  postcss: 8.5.23
+  nanoid: 3.3.18
+  esbuild: 0.28.1
+  ip-address: 10.3.1
+  js-yaml: 4.3.1
+  vite: 6.4.3
+  "brace-expansion@1": 1.1.18
+  "brace-expansion@2": 2.1.4
+  "brace-expansion@5": 5.0.9
+
+peerDependencyRules:
+  allowedVersions:
+    # Auth.js beta.32 has not yet widened its optional email-provider peer.
+    # This app uses Credentials auth and Nodemailer 9 for its own patched mailer.
+    nodemailer: "9"
+
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - esbuild
+  - msgpackr-extract
+  - prisma
+  - unrs-resolver
+
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  "@sentry/cli": true
+  esbuild: true
+  msgpackr-extract: true
+  prisma: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@next/env@15.5.25'
+  - '@next/swc-darwin-arm64@15.5.25'
+  - '@next/swc-darwin-x64@15.5.25'
+  - '@next/swc-linux-arm64-gnu@15.5.25'
+  - '@next/swc-linux-arm64-musl@15.5.25'
+  - '@next/swc-linux-x64-gnu@15.5.25'
+  - '@next/swc-linux-x64-musl@15.5.25'
+  - '@next/swc-win32-arm64-msvc@15.5.25'
+  - '@next/swc-win32-x64-msvc@15.5.25'
+  - next@15.5.25
+  - '@next/eslint-plugin-next@15.5.25'
+  - eslint-config-next@15.5.25
+  - nodemailer@9.1.0

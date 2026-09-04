@@ -12,6 +12,10 @@ on:
         options:
           - staging
           - production
+      image_tag:
+        description: '要部署的不可变镜像标签（例如 sha-完整提交SHA）'
+        required: true
+        type: string
 
 jobs:
   deploy:
@@ -28,20 +32,36 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            set -eu
             cd /opt/geo-seo
-            
-            # 拉取最新代码
-            git pull origin main
-            
-            # 拉取 Docker 镜像
-            docker pull ghcr.io/${{ github.repository }}/web:latest
-            docker pull ghcr.io/${{ github.repository }}/worker:latest
-            
-            # 重启服务
-            docker compose down
-            docker compose up -d
-            
-            # 清理旧镜像
+
+            case "${{ inputs.image_tag }}" in
+              sha-*) ;;
+              *) echo "image_tag 必须使用 CI 生成的 sha-* 标签"; exit 1 ;;
+            esac
+
+            git pull --ff-only origin main
+
+            export GEO_SEO_WEB_IMAGE="ghcr.io/${{ github.repository }}/web:${{ inputs.image_tag }}"
+            export GEO_SEO_WORKER_IMAGE="ghcr.io/${{ github.repository }}/worker:${{ inputs.image_tag }}"
+
+            docker compose pull web worker
+            docker compose up -d --no-build postgres redis
+            docker compose run --rm migrate
+            docker compose up -d --no-build --no-deps web worker
+
+            for i in $(seq 1 30); do
+              if docker compose exec -T web sh -c 'wget -qO- "http://${HOSTNAME}:3000/api/health"' > /dev/null; then
+                echo "Deployment health check passed"
+                break
+              fi
+              if [ "$i" -eq 30 ]; then
+                docker compose logs --tail=100 web worker
+                exit 1
+              fi
+              sleep 2
+            done
+
             docker image prune -f
 
   notify:

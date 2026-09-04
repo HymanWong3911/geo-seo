@@ -1,19 +1,17 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: geo_seo
-      POSTGRES_PASSWORD: geo_seo_dev
-      POSTGRES_DB: geo_seo
+      POSTGRES_USER: ${POSTGRES_USER:-geo_seo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geo_seo_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-geo_seo}
     ports:
-      - "5434:5432"   # 避开 5432 冲突（公司内网已有 PG）
+      - "${POSTGRES_PORT:-5434}:5432"   # 避开 5432 冲突（公司内网已有 PG）
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U geo_seo"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,7 +20,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6380:6379"   # 避开 6379 冲突
+      - "${REDIS_PORT:-6380}:6379"   # 避开 6379 冲突
     volumes:
       - redis_data:/data
     healthcheck:
@@ -37,6 +35,7 @@ services:
     ports:
       - "1025:1025"   # SMTP
       - "8025:8025"   # Web UI
+    profiles: ["dev"]
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -47,6 +46,67 @@ services:
     ports:
       - "5050:80"
     profiles: ["tools"]   # 仅在 --profile tools 启动
+
+  migrate:
+    image: ${GEO_SEO_WORKER_IMAGE:-geo-seo-worker:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-geo_seo}:${POSTGRES_PASSWORD:-geo_seo_dev}@postgres:5432/${POSTGRES_DB:-geo_seo}
+      REDIS_URL: redis://redis:6379
+    command: ["./node_modules/.bin/prisma", "migrate", "deploy", "--schema", "src/prisma/schema.prisma"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    image: ${GEO_SEO_WEB_IMAGE:-geo-seo-web:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-geo_seo}:${POSTGRES_PASSWORD:-geo_seo_dev}@postgres:5432/${POSTGRES_DB:-geo_seo}
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3010}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-false}
+    ports:
+      - "${APP_PORT:-3010}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://$${HOSTNAME}:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    image: ${GEO_SEO_WORKER_IMAGE:-geo-seo-worker:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-geo_seo}:${POSTGRES_PASSWORD:-geo_seo_dev}@postgres:5432/${POSTGRES_DB:-geo_seo}
+      REDIS_URL: redis://redis:6379
+      GEO_RUN_MOCK_LLM: ${GEO_RUN_MOCK_LLM:-false}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
 volumes:
   pg_data:

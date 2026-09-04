@@ -4,19 +4,25 @@ const { withSentryConfig } = require("@sentry/nextjs");
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  serverExternalPackages: ["ioredis", "bullmq", "@prisma/client", "bcryptjs"],
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",
     },
-    serverComponentsExternalPackages: ["ioredis", "bullmq", "@prisma/client", "bcryptjs"],
   },
 };
 
 const sentryOptions = {
-  // 上报所有错误
-  errorHandler: (err) => {
-    console.error("Unhandled error:", err);
-    throw err;
+  // 未配置上传凭据时仍保留运行时错误采集，但不尝试上传 sourcemap。
+  silent: true,
+  telemetry: false,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
   },
 };
 
