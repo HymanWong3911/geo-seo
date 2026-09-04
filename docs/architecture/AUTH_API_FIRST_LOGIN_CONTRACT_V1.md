@@ -2,13 +2,17 @@
 type: architecture-contract
 project: geo-seo
 contract: auth-api-first-login
-version: v1
-status: PROPOSED / NOT IMPLEMENTED / NOT RELEASE APPROVED
+version: v1.1
+status: PROPOSED / L0 HARNESS_PREFLIGHT_BLOCKED / NOT IMPLEMENTED / NOT RELEASE APPROVED
 created: 2026-09-04
-base_sha: 947dcb9535a65f4e8f5211d522b8595381661dbd
+revised: 2026-09-04
+base_sha: a56039169644997efd2fefa5d09127da791f333b
+runtime_product_rollback_sha: a56039169644997efd2fefa5d09127da791f333b
+f0_1_contract_construction_sha: PENDING_COORDINATOR_APPROVED_V1_1_CONTRACT_COMMIT
+supersedes: AUTH_API_FIRST_LOGIN_CONTRACT_V1.md@a56039169644997efd2fefa5d09127da791f333b
 ---
 
-# GEO-SEO First-Login/API Boundary Contract V1
+# GEO-SEO First-Login/API Boundary Contract V1.1
 
 > This is a contract-first design. It is a proposal only: no implementation,
 > schema migration, deployment, release, or production approval is implied.
@@ -83,9 +87,13 @@ evidence.
    `passwordHash`, `mustChangePassword`, and `lastPasswordChangeAt`. No new
    column is required by this contract.
 
-The planned reproduction and all implementation commands are deliberately
-listed as **PLANNED / NOT RUN** in §14. This document does not claim that the
-observed behavior has been re-executed in this worktree.
+The source-inspection reproduction and all future V1.1 implementation commands
+are deliberately listed as **PLANNED / NOT RUN** in §14. This document does not
+claim that the observed defect has been re-executed in this worktree. A separate
+L0 probe did run build/static gates but stopped before any valid middleware HTTP
+row because its fixture-bootstrap retention was incomplete; its precise result
+is `HARNESS_PREFLIGHT_BLOCKED`, recorded by the immutable evidence refs in
+§8.3, not a runtime boundary finding.
 
 ## 3. Harness boundary and invariants
 
@@ -110,24 +118,122 @@ The domain core must not depend on a Prisma client, Auth.js callback object,
 cookie value, provider SDK, or browser `useSession()` state. No dynamic plugin
 loading is proposed.
 
-### 3.2 L0 auth-boundary feasibility gate (implementation blocker)
+### 3.2 F0 auth-boundary feasibility taxonomy and fixed boundary
 
-L0 is an independent, disposable candidate branch/worktree whose only purpose
-is to prove that `AuthStatePort` backed by Prisma can run in the existing Next
-15 **nodejs** middleware in both a production build and an isolated runtime
-smoke. L0 is never activated, merged into a release candidate, or treated as
-product implementation. Its proof must cover Prisma client loading, database
-connectivity, timeout/unavailable behavior, and the absence of a middleware
-bundling/runtime regression.
+F0 has exactly three outcomes: `PASS`, `BOUNDARY_FAIL`, and
+`HARNESS_PREFLIGHT_BLOCKED`. They are mutually exclusive and are classified in
+this priority order:
 
-Only an L0 PASS receipt against an exact candidate SHA allows the coordinator
-to sign L1. If L0 fails, all implementation stops and this contract plus its
-lease matrix must be revised and independently reviewed. L1 has no authority
-to switch to a route-handler fallback, expand to every protected route, or use
-a JWT-only `mustChangePassword` decision. Any alternative boundary requires a
-new contract revision and a new feasibility lease.
+1. `HARNESS_PREFLIGHT_BLOCKED`: the candidate, fixture, harness,
+   infrastructure, evidence freeze/retention, exact cleanup, or functional
+   zero-egress proof fails such that the run cannot be trusted as a boundary
+   verdict. This includes a harness fault after preflight during the single
+   runtime attempt. If a boundary assertion failure is mixed with a harness or
+   evidence failure and attribution is not conclusive, fail closed to this
+   class and do not infer a boundary result.
+2. `BOUNDARY_FAIL`: the candidate and harness evidence remain trustworthy, and
+   the production build or at least one actual fixed-boundary runtime assertion
+   fails conclusively. Remaining rows terminated by that conclusive result are
+   recorded as `NOT_RUN_AFTER_BOUNDARY_FAIL`; they do not reclassify the result
+   as preflight blocked.
+3. `PASS`: every required build, runtime, HTTP-row, retained-evidence, exact
+   cleanup, and functional zero-egress gate passes.
 
-### 3.3 Non-negotiable invariants
+Only `PASS` permits the coordinator to consider signing L1. Both non-PASS
+outcomes block L1, merge, activation, G1/G2, release, and production.
+
+The sole F0 boundary remains, without substitution:
+
+```text
+Next 15 Node.js middleware → Prisma AuthStatePort/probe → task-isolated PostgreSQL
+```
+
+F0 must not use a route-handler fallback, a JWT-only decision, the Docker
+default network, or a retry on another boundary. It is an independent,
+disposable candidate branch/worktree; it is never activated, merged into a
+release candidate, or treated as product implementation. A valid PASS proves
+Prisma client loading, database connectivity, timeout/unavailable behavior, and
+the absence of a middleware bundling/runtime regression against this exact
+boundary.
+
+The observed L0 receipt is `HARNESS_PREFLIGHT_BLOCKED`: fixture bootstrap
+evidence was not retained, so no authoritative-state HTTP row was evaluated.
+It must not be described as a boundary failure. The immutable failed candidate
+and evidence receipt are recorded in §8.3 and §12.
+
+### 3.3 F0.1 preflight and single-runtime-attempt rule
+
+F0.1 is a revision-only feasibility lease. Its branch must be created from the
+coordinator-approved V1.1 contract commit SHA. The three probe paths are then
+materialized as exact blobs from
+`d8e433d8b469ac459148e9ef5d201d54123dcf92`; that SHA is blob authority only,
+not the F0.1 Git parent. The historical receipt commit must not be cherry-picked.
+Before any F0.1 preflight or runtime command runs, the complete
+source/test/harness candidate **must be committed to an immutable Git SHA**.
+The SHA is then recorded in the task-local stage manifest and every retained
+receipt. A mutable worktree, post-run candidate commit, missing candidate SHA,
+or probe-blob mismatch is `HARNESS_PREFLIGHT_BLOCKED`.
+
+The fixture/bootstrap harness is a static/local preflight on that same
+candidate. It must prove, before runtime, that the candidate-owned bootstrap
+test and evidence collector can preserve the required redacted evidence. Only
+after this preflight PASS may F0.1 make **one** production-runtime attempt. In
+one continuous web/isolated-PostgreSQL lifecycle, that attempt must obtain all
+three HTTP rows: available state, locked/slow-query timeout, and PostgreSQL
+unavailable. Every failure row must additionally prove JSON media type, absent
+`Location`, and `Cache-Control: no-store`. The web runtime must be the traced
+task-owned web container described in §12.1; host Next is forbidden.
+
+No second runtime path, default-network fallback, route-handler/JWT-only
+fallback, or retry is authorized by this contract. A preflight or evidence
+retention failure is `HARNESS_PREFLIGHT_BLOCKED`. Under a trustworthy harness,
+a conclusive production-build failure or any conclusive actual fixed-boundary
+assertion failure is `BOUNDARY_FAIL`; later rows may be recorded as
+`NOT_RUN_AFTER_BOUNDARY_FAIL`. Only completion and PASS of every required
+build, runtime, HTTP, evidence, cleanup, and functional-egress gate is `PASS`.
+Any mixed harness/evidence/infrastructure and boundary signal whose attribution
+is uncertain is `HARNESS_PREFLIGHT_BLOCKED`, with no boundary inference.
+
+### 3.4 Task-local stage manifest
+
+The tracked F0.1 harness exclusively owns this runtime evidence file:
+
+```text
+<system-temp>/geo-auth-f0-1-<run-id>/stage-manifest.json
+```
+
+The run directory is current-uid-owned mode `0700`; the manifest is a regular,
+non-symlink file owned by the current uid with mode `0600`. It is created
+exclusively and updated by atomic same-directory replace, or by an append-only
+mechanism whose records are independently fsynced and validated. No other
+process may write it. Its exact schema is versioned by the harness and contains
+at least: `contractSha`, `candidateSha`, `runId`, `stage`, `childExit`,
+`errorClass`, `resourceLabels`, `safeInspect`, `namespaceInspect`,
+`containerPidInventory`, `tracerSummary`, `httpRowResults`, and
+`evidenceFreezeState`. `resourceLabels` must identify the task-owned PostgreSQL
+and web containers separately. `tracerSummary` must record the pinned tracer
+identity/version, startup-before-main proof, followed-fork/thread coverage,
+event-class counts for `socket`, `connect`, `sendto`, `sendmsg`, and `sendmmsg`,
+lost-event count, exit status, and PID-tree reconciliation. It must also record
+that namespace inspection, all three HTTP probes, and the PostgreSQL stop action
+were spawned by the traced candidate supervisor; any syscall or child-coverage
+gap is `HARNESS_PREFLIGHT_BLOCKED`.
+
+The manifest’s pre-cleanup `errorClass` is provisional. Cleanup or evidence-
+retention failure may only downgrade the final receipt to
+`HARNESS_PREFLIGHT_BLOCKED`; it can never upgrade a result.
+
+The manifest must not contain a secret, URL, port, password, connection string,
+probe key, cookie, token, private key, or credential value. It is task-local
+runtime evidence, not a candidate or product-repository file. Before cleanup,
+the harness freezes, fsyncs, and validates the allowed runtime evidence. After
+the exact task-resource cleanup attempt, the receipt records the redacted
+frozen summary and actual final inventory. Only `0/0/0` can PASS; any residual
+task container, volume, or network is `HARNESS_PREFLIGHT_BLOCKED`. Only after
+that receipt is committed may the task-local manifest and run directory be
+cleaned.
+
+### 3.5 Non-negotiable invariants
 
 - A client-provided session object or JWT claim is never sufficient proof that
   the password-change gate is cleared.
@@ -143,7 +249,8 @@ new contract revision and a new feasibility lease.
 - A test reconcile mode can change only `mustChangePassword`, only for an
   explicitly scoped isolated test receipt, and fails before any write outside
   that scope.
-- No Prisma migration is part of V1.
+- No Prisma migration is part of V1.1; this inherits the V1 no-migration
+  baseline.
 
 ## 4. Request classification and exact response matrix
 
@@ -204,7 +311,7 @@ The exact localized message may be translated later; the machine-readable code
 and HTTP status are stable contract fields. `details` is optional and must not
 contain password values, hashes, cookies, JWTs, or secret references.
 
-Only these three surfaces are in scope for this defensive parser in V1:
+Only these three surfaces are in scope for this defensive parser in V1.1:
 `src/app/change-password/page.tsx`, the auth E2E helper, and the contract
 login/session probe. A whole-site fetch wrapper is a separate task and is not
 part of A1-A16.
@@ -231,7 +338,7 @@ The change-password page must not call `res.json()` blindly. It must handle a
 non-JSON response as a transport/protocol error and keep the password form
 usable without leaking response HTML into an error message. The E2E helper and
 contract login/session probe must apply the same media-type and final-URL
-checks. No other site-wide client is claimed covered by V1.
+checks. No other site-wide client is claimed covered by V1.1.
 
 ## 6. Authoritative state and session/JWT refresh
 
@@ -254,7 +361,7 @@ The middleware and password-change handlers must therefore use a single
   same successful transaction.
 
 If a short-lived cache is introduced later, its TTL and invalidation must be a
-separate contract. V1 defaults to a direct authoritative read at the gate.
+separate contract. V1.1 defaults to a direct authoritative read at the gate.
 
 If the authoritative read fails, the result is not “unauthenticated” and is
 not allowed to use the JWT hint. The API boundary returns HTTP 503 with error
@@ -359,7 +466,7 @@ value.
   `mustChangePassword=true`.
 - A stale old JWT is handled by the authoritative gate and cannot grant access
   contrary to the current user row.
-- V1 does not add a session table, token-revocation table, or password-version
+- V1.1 does not add a session table, token-revocation table, or password-version
   column. If incident response later requires immediate revocation of all
   sessions, that is a separately approved auth/security change.
 
@@ -485,21 +592,28 @@ keeps both user upserts as `update: {}` and never changes an existing
 
 ### 8.1 No Prisma migration
 
-V1 reuses the existing `User` fields and initial migration. Acceptance must
-prove that the schema and migration history remain unchanged. No `prisma migrate
-dev`, `migrate resolve`, `db push`, or schema edit is permitted under this
-contract.
+V1.1 and every F0/F0.1 probe reuse the existing `User` fields and initial
+migration. The contract and probe change neither schema nor migration history.
+Acceptance must prove both paths remain unchanged. No `prisma migrate dev`,
+`migrate resolve`, `db push`, or schema edit is permitted under this contract.
 
 ### 8.2 Ordered rollout
 
 Implementation is staged so that each step is independently revertible but no
 intermediate step is independently activatable:
 
-0. Run L0 in its own disposable candidate branch/worktree. It only probes Next
-   15 nodejs middleware + Prisma production build/runtime behavior and produces
-   an exact-SHA PASS/FAIL receipt. It is never activated. On FAIL, stop and
-   revise this contract/lease matrix; do not dispatch L1.
-1. After L0 PASS, add L1 route-policy/state tests and typed response seams,
+0. L0 produced `HARNESS_PREFLIGHT_BLOCKED`, not a boundary result. Run F0.1 in
+   its own disposable branch/worktree from the coordinator-approved V1.1
+   contract commit. Materialize only the three exact `d8e...` probe blobs, add
+   the two tracked harness/test files, and commit the complete candidate before
+   preflight/runtime. F0.1 performs static/local fixture-bootstrap preflight
+   first, then at most one fixed-boundary production runtime in the same
+   web/isolated-PostgreSQL lifecycle. After cleanup it must create and commit
+   the receipt. The receipt records exactly `PASS`, `BOUNDARY_FAIL`, or
+   `HARNESS_PREFLIGHT_BLOCKED`; it never activates the candidate. A non-PASS
+   outcome stops L1 and requires a later contract/lease decision; it does not
+   authorize a fallback boundary.
+1. After F0.1 PASS, add L1 route-policy/state tests and typed response seams,
    preserving the exact proven middleware boundary.
 2. After L1, L2 and L3 may prepare in parallel: L2 adds conditional password
    transitions, direct transaction-bound AuditLog, and server-side session
@@ -510,12 +624,52 @@ intermediate step is independently activatable:
 5. Run L6 independent review and evidence capture. Only then may the
    coordinator decide whether a later release gate is warranted.
 
-### 8.3 Rollback
+### 8.3 Failed-candidate evidence custody
+
+A failed or passing F0.1 run **must** use evidence-only dual commits, in this
+order:
+
+1. a source/test/harness candidate commit made **before** preflight or runtime,
+   identified by immutable SHA;
+2. after runtime evidence is frozen and validated, exact resource cleanup is
+   attempted, and the actual final inventory is known, a mandatory receipt
+   commit that records only the permitted redacted evidence and binds it to the
+   candidate SHA. Only an inventory of `0/0/0` is eligible for PASS.
+
+The receipt file is not part of the candidate commit. A separately approved
+empty/template receipt may be precommitted, but this contract does not require
+or recommend it; the normal F0.1 flow creates the receipt only after run and
+cleanup. The receipt text must reference the candidate SHA. Its own receipt
+commit SHA cannot self-reference and must instead be reported after commit in
+the handoff/custody message.
+
+Neither commit may be merged, activated, or treated as release code. The prior
+L0 evidence-only refs are preserved as
+`d8e433d8b469ac459148e9ef5d201d54123dcf92` (candidate) and
+`babbda85a3550ed53da301f64c41d00fef7fe76b` (receipt). They are custody
+evidence for a `HARNESS_PREFLIGHT_BLOCKED` run, not a PASS or a product
+baseline. F0.1 may read the three exact probe blobs from the candidate as
+authority, but its branch starts from the approved V1.1 contract commit; the
+historical candidate is not a parent. F0.1 must not amend, rewrite, reset,
+delete, or mutate either historical ref, and it must not cherry-pick the
+historical receipt.
+
+### 8.4 Rollback
 
 Rollback is a Git/runtime rollback to the last accepted commit for the auth
-  slice; it does not require a database rollback or destructive data action.
-  Before activation, retain the exact base SHA and a clean worktree. On a
-  failed gate:
+slice; it does not require a database rollback or destructive data action.
+For a new F0.1 preflight/runtime failure, retain its evidence-only branch and
+return the product baseline to
+`a56039169644997efd2fefa5d09127da791f333b`; do not merge or activate the
+probe candidate. Before activation, retain the exact base SHA and a clean
+worktree. On a failed gate:
+
+- `a56039169644997efd2fefa5d09127da791f333b` is the runtime/product rollback
+  baseline;
+- the separately approved V1.1 contract commit SHA is only the F0.1 contract
+  and candidate-construction baseline;
+- neither SHA may be substituted for the other in receipts, rollback, blob
+  comparison, or branch construction.
 
 - stop activation of the candidate;
 - restore the previous application code through the normal branch/worktree
@@ -536,7 +690,7 @@ Rollback is a Git/runtime rollback to the last accepted commit for the auth
 No automatic secret rotation or forced global logout is part of rollback. A
 security incident requiring those actions needs a separate explicit approval.
 
-### 8.4 Session expiry semantics
+### 8.5 Session expiry semantics
 
 - Existing session lifetime remains 24 hours unless a later contract changes it.
 - A successful password change issues a new session with a fresh expiry based on
@@ -546,7 +700,7 @@ security incident requiring those actions needs a separate explicit approval.
   authoritative user state.
 - Expired, malformed, or unverifiable sessions return the existing 401 JSON for
   APIs and the existing login redirect for pages.
-- V1 adds no revocation storage. Forced revocation remains an explicit future
+- V1.1 adds no revocation storage. Forced revocation remains an explicit future
   security task.
 
 ## 9. Non-overlapping implementation leases
@@ -555,21 +709,24 @@ Each lease below must use its own task, branch, and worktree. A worker owns only
 the listed files; every new test/fixture path is explicit. No lease may modify
 the contract document after this handoff unless a new contract revision is
 issued. An intermediate lease cannot be activated or released alone: the
-dependency graph is `L0 PASS → L1 → (L2 ∥ L3)`, then `L2 → L4`,
-`(L1 + L2 + L3 + L4) → L5`, and `L5 → L6`. L0 is a disposable feasibility
-candidate and never activates. L1 preserves the exact boundary proven by L0;
-it cannot choose another boundary. The coordinator must hold each predecessor’s
-exact SHA and acceptance receipt before dispatching or activating a successor.
+dependency graph is `F0.1 PASS → L1 → (L2 ∥ L3)`, then `L2 → L4`,
+`(L1 + L2 + L3 + L4) → L5`, and `L5 → L6`. Historical L0 is a disposable
+`HARNESS_PREFLIGHT_BLOCKED` candidate and never activates. F0.1 and L1 preserve
+the exact fixed boundary in §3.2; neither may choose another boundary. The
+coordinator must hold each predecessor’s exact SHA and acceptance receipt
+before dispatching or activating a successor.
 
 | Lease | Exact files owned | Dependencies and required outcome |
 |---|---|---|
-| L0 auth-boundary feasibility | `src/middleware.ts`; `src/lib/auth/state-probe.ts` (new); `src/middleware-auth-state-probe.test.ts` (new); `docs/handoff/AUTH_BOUNDARY_FEASIBILITY_20260904.md` (new) | Independent disposable branch/worktree. Probe only: Next 15 nodejs middleware + Prisma production build/runtime, timeout, and unavailable-state behavior against isolated PostgreSQL. Never activate or merge as product code. PASS permits L1; FAIL stops all implementation and requires contract/lease revision. |
-| L1 auth gate/state boundary | `src/middleware.ts`; `src/lib/auth/route-policy.ts` (new); `src/lib/auth/state.ts` (new); `src/lib/api/response.ts`; `src/middleware.test.ts` (new); `src/lib/auth/state.test.ts` (new); `src/lib/api/response.test.ts` | Requires L0 PASS exact-SHA receipt and preserves that boundary. Implements only the middleware gate/state contract, exact page/API matrix, public exceptions, 503/no-store/no handler, no API `Location`, and typed 401/403/503 envelopes. It cannot switch to route-handler fallback or expand ownership to protected route files. |
+| L0 auth-boundary feasibility (historical) | `src/middleware.ts`; `src/lib/auth/state-probe.ts`; `src/middleware-auth-state-probe.test.ts`; `docs/handoff/AUTH_BOUNDARY_FEASIBILITY_20260904.md` | Evidence-only historical branch. Its result is `HARNESS_PREFLIGHT_BLOCKED`, boundary feasibility `NOT_EVALUATED`; no retry or mutation under this lease. Candidate/receipt refs are §8.3. |
+| F0.1 candidate: fixture-bootstrap feasibility | Writable candidate files only: `scripts/harness/auth-boundary-fixture-bootstrap.ts` (new; owns both in-container supervisor flows); `scripts/harness/auth-boundary-fixture-bootstrap.test.ts` (new, with in-file synthetic allowed/denied/lost-event trace fixtures). Read-only materialized blobs: `src/middleware.ts`; `src/lib/auth/state-probe.ts`; `src/middleware-auth-state-probe.test.ts`, each exactly equal to its blob at `d8e433d8b469ac459148e9ef5d201d54123dcf92`. | Branch from the approved V1.1 contract commit SHA, not from `d8e...`; do not cherry-pick the historical receipt. Before preflight, prove worktree, staged-index, and committed-HEAD blob equivalence for all three paths, then commit the two new tracked harness/test files with the materialized probe blobs as the immutable candidate. Preflight must prove the task-local manifest, exact two-container `--network none`/shared-loopback topology, pinned full-lifecycle fork/thread syscall tracing for `socket`/`connect`/`sendto`/`sendmsg`/`sendmmsg`, supervisor-owned namespace inspection/three HTTP probes/PG stop, PID-tree reconciliation, and synthetic trace adjudication before exactly one runtime lifecycle. No host Next, untraced `docker exec`, third fixture file, tracer/network fallback, activation, or merge. |
+| F0.1 receipt | `docs/handoff/AUTH_BOUNDARY_F0_1_RECEIPT_20260904.md` (new, created only after run/evidence freeze/exact resource cleanup attempt) | Not part of the candidate commit and not writable during candidate/preflight/runtime stages. After cleanup, create the receipt, bind it to the candidate SHA, record the actual inventory, and make the mandatory second commit. Only exact `0/0/0` is PASS-eligible; any residual is `HARNESS_PREFLIGHT_BLOCKED`. Report the resulting receipt commit SHA only in handoff/custody. Only `PASS` permits L1. |
+| L1 auth gate/state boundary | `src/middleware.ts`; `src/lib/auth/route-policy.ts` (new); `src/lib/auth/state.ts` (new); `src/lib/api/response.ts`; `src/middleware.test.ts` (new); `src/lib/auth/state.test.ts` (new); `src/lib/api/response.test.ts` | Requires F0.1 `PASS` exact-SHA receipt and preserves that boundary. Implements only the middleware gate/state contract, exact page/API matrix, public exceptions, 503/no-store/no handler, no API `Location`, and typed 401/403/503 envelopes. It cannot switch to route-handler fallback or expand ownership to protected route files. |
 | L2 first-login/session transition | `src/lib/auth.ts`; `src/types/next-auth.d.ts`; `src/app/api/auth/first-login-change-password/route.ts`; `src/app/api/auth/change-password/route.ts`; `src/lib/auth/session-refresh.ts` (new); `src/lib/auth/session-refresh.test.ts` (new); `src/app/api/auth/first-login-change-password/route.test.ts` (new); `src/app/api/auth/change-password/route.test.ts` (new) | Depends on L1 receipt. Lock server-only `unstable_update`; JWT update re-reads DB and ignores client role/flag. Both routes use CAS/conditional update plus direct `AuditLog` insert in one Prisma transaction; they do not call best-effort `audit()`. Tests cover first-login and ordinary concurrent losers, atomic audit rollback, pending/completed reconciliation, and route-level `Set-Cookie`. Stop if `unstable_update` cannot satisfy the contract. |
 | L3 seed policy | `src/prisma/seed.ts`; `src/prisma/seed-policy.ts` (new); `src/prisma/seed-policy.test.ts` (new); `tests/fixtures/auth-first-login/seed-fixture.ts` (new) | Depends on L1 and may proceed in parallel with L2. Owns the receipt parser/validator and test-only fixture builder. Its tests may create schema-valid or intentionally invalid receipt files only inside an L3 test-owned temporary directory; they never use or mutate an L5 runtime receipt. Negative tests prove missing path, relative path, symlink, non-regular file, wrong owner/mode where platform-testable, expired receipt, field/run mismatch, missing harness ID, non-loopback host, and DB-name mismatch each cause zero writes. |
 | L4 change-password client | `src/app/change-password/page.tsx`; `src/lib/api/auth-first-login-client.ts` (new); `src/lib/api/auth-first-login-client.test.ts` (new) | Depends on L1 and L2 receipts. Defensive parsing is limited to this client: media type `application/json`, status/envelope, relative or same-origin absolute redirect resolution, final pathname, and typed refresh-required handling. No whole-site fetch wrapper. |
 | L5 auth E2E/probes | `tests/e2e/auth-first-login-flow.test.ts` (new); `tests/e2e/helpers/auth-first-login.ts` (new); `tests/e2e/fixtures/auth-first-login.ts` (new) | Depends on L1-L4 exact SHAs. The L5 fixture is the sole runtime owner that creates, atomically publishes, expires, and cleans the run-specific creation receipt. Starts only isolated PostgreSQL + web by default; no Redis, worker, scheduler, brand monitor, real providers, or external actions. Covers all A1-A16 auth rows and the login/session probe. |
-| L6 independent review/evidence | No production files; `docs/handoff/AUTH_FIRST_LOGIN_REVIEW_20260904.md` (new) only after coordinator permits evidence location | Depends on L0 PASS and all L1-L5 receipts. Review exact candidate SHA, audit/CAS behavior, diff, tests, rollback, and unrun commands; cannot repair implementation files. |
+| L6 independent review/evidence | No production files; `docs/handoff/AUTH_FIRST_LOGIN_REVIEW_20260904.md` (new) only after coordinator permits evidence location | Depends on F0.1 PASS and all L1-L5 receipts. Review exact candidate SHA, audit/CAS behavior, diff, tests, rollback, and unrun commands; cannot repair implementation files. |
 
 The coordinator must not assign overlapping files to L1-L5, and no lease may be
 activated independently of its dependency receipts. L5 may request behavior
@@ -585,7 +742,7 @@ passing unit test does not substitute for an isolated E2E row.
 
 | ID | Acceptance | Evidence required |
 |---|---|---|
-| F0 | Auth-boundary feasibility | Independent L0 exact-SHA receipt proves Next 15 nodejs middleware + Prisma production build/runtime against isolated PostgreSQL; candidate is not activated. FAIL stops L1 and triggers contract revision. |
+| F0 | Auth-boundary feasibility | Outcome uses the mutually exclusive §3.2 priority. `PASS` requires every build/runtime/HTTP/evidence/cleanup/functional-egress gate. `BOUNDARY_FAIL` requires a trustworthy harness and conclusive production-build or actual-boundary assertion failure; later rows may be `NOT_RUN_AFTER_BOUNDARY_FAIL`. Any candidate/fixture/harness/infrastructure/evidence/cleanup/functional-egress failure, runtime harness interruption, or mixed failure without conclusive attribution is `HARNESS_PREFLIGHT_BLOCKED`. Only PASS permits L1; both non-PASS outcomes block it, and no outcome activates the candidate. |
 | A1 | Unauthenticated protected API | 401, JSON content type, standard envelope, no `Location` |
 | A2 | Must-change protected API | 403, `MUST_CHANGE_PASSWORD`, JSON content type, no `Location`, no HTML |
 | A3 | Must-change page | 307 to `/change-password`; followed final URL is exact password page |
@@ -598,7 +755,7 @@ passing unit test does not substitute for an isolated E2E row.
 | A10 | Seed existing row | Re-running default seed preserves password hash and policy flag exactly |
 | A11 | Seed fresh isolated DB | Explicit fixture inputs yield deterministic users and policy; repeat is idempotent |
 | A12 | Seed reconcile guard | Exact variables, receipt path/file/owner/mode/JSON/time checks, harness/receipt/run binding, loopback host resolution, and `current_database()` match are enforced before L3’s first write; missing/relative path, symlink, non-regular file, wrong owner/mode where platform-testable, expiry, field mismatch, missing harness ID, non-loopback host, DB-name mismatch, out-of-scope, and production mode each prove zero writes |
-| A13 | No schema migration | `src/prisma/schema.prisma` and `src/prisma/migrations/` are unchanged by `git diff --exit-code BASE -- <paths>`, covering committed, staged, and unstaged changes; F0’s proven middleware boundary is unchanged and no fallback is introduced |
+| A13 | No schema migration | `src/prisma/schema.prisma` and `src/prisma/migrations/` are unchanged by `git diff --exit-code BASE -- <paths>`, covering committed, staged, and unstaged changes; F0.1’s fixed middleware boundary is unchanged and no fallback is introduced |
 | A14 | Contract isolation | No CASTR files, database, UI, business orchestration, or cross-repo source imports changed |
 | A15 | Offline safety | Auth E2E uses only isolated PostgreSQL and web; it allows required loopback PostgreSQL traffic but proves zero external egress and does not start Redis, worker, scheduler, brand monitor, real providers, publishing, paid actions, or production credentials |
 | A16 | Rollback | Candidate can be rejected and previous runtime restored without destructive DB operation; evidence includes exact SHA and state |
@@ -644,7 +801,8 @@ PostgreSQL fixture is allowed and must not be misreported as external egress.
 
 Each implementation handoff must include:
 
-- the independent L0 PASS receipt and its unactivated probe branch/worktree SHA;
+- the F0/F0.1 outcome taxonomy, its pre-run immutable candidate SHA, and its
+  unactivated probe branch/worktree SHA; L1 requires F0.1 `PASS` only;
 - repository and worktree path;
 - branch and full HEAD SHA;
 - `git status --short --branch`, worktree/stash state, and active writer list;
@@ -658,6 +816,98 @@ Each implementation handoff must include:
   cleanup, plus L3 read-only validation and zero-write negative cases;
 - isolated resource and external-side-effect result;
 - remaining risks, rollback point, and unrun commands.
+
+### 12.1 F0.1 retained-evidence whitelist
+
+Before resource cleanup, F0.1 must freeze, fsync, and validate the following
+**and only redacted forms of command/output evidence that make these fields
+auditable** in the task-local stage manifest:
+
+- stage name/order, each child-process exit result, and the final error
+  classification;
+- exact sanitized command text (command structure and redaction marker, never
+  substituted secret values);
+- approved contract SHA and immutable candidate SHA;
+- exact task resource identity (task-scoped container, volume, and network
+  names/labels), plus a summarized network/container inspect result;
+- HTTP status, selected safe headers, and body-schema result for each required
+  row; for failure rows this must show JSON media type, no `Location`, and
+  `Cache-Control: no-store`;
+
+The sequence is mandatory:
+
+1. freeze, fsync, and schema/whitelist-validate the runtime evidence;
+2. clean only the exact task-labeled resources;
+3. create the receipt and append the actual final container/volume/network
+   inventory; require `0/0/0` for PASS and classify any residual as
+   `HARNESS_PREFLIGHT_BLOCKED`;
+4. commit that receipt as the mandatory second commit;
+5. report the receipt commit SHA in handoff/custody, then clean the task-local
+   manifest/run directory.
+
+Cleanup evidence is necessarily appended after resource cleanup; it is not a
+field that must already exist in the pre-cleanup evidence freeze.
+
+The whitelist must never retain a runtime URL, port, password, connection
+string, probe key, cookie, token, private key, secret, or credential value. If
+the harness cannot retain the required whitelist before cleanup, the result is
+`HARNESS_PREFLIGHT_BLOCKED`; it must not reconstruct missing facts after the
+run or label the boundary infeasible.
+
+Network configuration inspection can prove only that a requested setting is
+present. Functional zero-external-egress is a hard F0 `PASS` gate. F0.1 must
+use exactly two task-owned containers and no host Next process:
+
+- PostgreSQL starts with `--network none`;
+- the web container starts with `--network container:<pg-container>` and thus
+  shares PostgreSQL's loopback-only network namespace;
+- a task-owned harness supervisor keeps the PostgreSQL container and shared
+  namespace alive while its traced PostgreSQL child is deliberately stopped
+  for the unavailable row; stopping PostgreSQL must not replace the namespace
+  or start a third container;
+- the candidate's tracked supervisors generate and execute namespace
+  inspection, the available/locked-or-slow/unavailable HTTP probes, and the
+  PostgreSQL stop action as children in their already traced process trees;
+  `docker exec` is not used for those actions;
+- every HTTP probe uses only loopback in the shared namespace; no
+  host-published port or Docker default/custom bridge is used;
+- supervisor-captured inspect evidence plus namespace-local interface and route
+  inspection must show only `lo` and no external route.
+
+Before either container's main process starts, both process trees must be
+covered by a task-owned, pinned `strace -ff` or equivalent syscall tracer that
+follows forks and threads from before the supervisors spawn their first child
+until after every child and container main process stops. It must observe
+`socket`, `connect`, `sendto`, `sendmsg`, and `sendmmsg`, covering DNS over
+UDP/TCP and short-lived connections. Namespace inspection, all three HTTP
+probes, and the PostgreSQL stop action must therefore be traced from their own
+spawn, not attached after start. The harness reconciles tracer PIDs against
+cgroup/container PID inventories, requires zero untraced children, zero lost
+events, and tracer exit status 0. Only `AF_UNIX` and the explicitly classified
+loopback HTTP/PostgreSQL tuples are allowed. Any non-loopback or DNS connection
+attempt, syscall/child coverage gap, untraced child, lost event, tracer failure,
+or inability to deploy the pinned tracer is `HARNESS_PREFLIGHT_BLOCKED`; no
+alternate network, `docker exec` escape hatch, or sentinel may be used.
+
+This is syscall capture rather than periodic polling, so short-lived
+connections cannot fall between samples. The harness must not actively contact
+a public IP, public hostname, or external URL to test isolation. Trace evidence
+retains only redacted syscall classes, allowed/denied classifications, counts,
+PID-coverage results, and exit/lost-event status; it never retains a port, URL,
+address, credential, or payload. The tracked harness test must include
+synthetic allowed, denied, and lost-event trace fixtures inside
+`scripts/harness/auth-boundary-fixture-bootstrap.test.ts`; no third fixture
+file is leased.
+
+Inspect-only evidence is `HARNESS_PREFLIGHT_BLOCKED`, not a partial PASS. This
+F0 gate proves only the probe lifecycle; A15 separately proves the complete
+auth E2E lifecycle.
+
+`Promise.race` timing alone does not cancel an in-flight Prisma query. Any
+future L1 design/acceptance gate must separately specify and verify finite
+safe-integer timeout validation, PostgreSQL statement timeout, connection
+recovery, and backpressure/load behavior. F0.1 cannot claim those properties
+from a response timeout alone.
 
 This contract does not authorize merge, G1/G2, release, production, external
 provider use, or real publishing. The coordinator and user retain those gates.
@@ -682,18 +932,55 @@ recorded for reproducibility, but have not been run by this contract writer:
 ```text
 PLANNED / NOT RUN: git status --short --branch
 PLANNED / NOT RUN: git worktree list
+PLANNED / NOT RUN: test "$(git rev-parse <APPROVED_V1_1_CONTRACT_SHA>^{commit})" = "<APPROVED_V1_1_CONTRACT_SHA>"
+PLANNED / NOT RUN: git worktree add -b codex/geo-auth-f0-1-<run-id> <F0_1_WORKTREE> <APPROVED_V1_1_CONTRACT_SHA>
+PLANNED / NOT RUN: git restore --source=d8e433d8b469ac459148e9ef5d201d54123dcf92 -- src/middleware.ts src/lib/auth/state-probe.ts src/middleware-auth-state-probe.test.ts
+PLANNED / NOT RUN: test ! -e docs/handoff/AUTH_BOUNDARY_FEASIBILITY_20260904.md # never materialize/cherry-pick the babbda85a3550ed53da301f64c41d00fef7fe76b receipt
+PLANNED / NOT RUN: git diff --exit-code d8e433d8b469ac459148e9ef5d201d54123dcf92 -- src/middleware.ts src/lib/auth/state-probe.ts src/middleware-auth-state-probe.test.ts
+PLANNED / NOT RUN: test "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware.ts)" = "$(git hash-object src/middleware.ts)"
+PLANNED / NOT RUN: test "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/lib/auth/state-probe.ts)" = "$(git hash-object src/lib/auth/state-probe.ts)"
+PLANNED / NOT RUN: test "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware-auth-state-probe.test.ts)" = "$(git hash-object src/middleware-auth-state-probe.test.ts)"
+PLANNED / NOT RUN: git add -- src/middleware.ts src/lib/auth/state-probe.ts src/middleware-auth-state-probe.test.ts scripts/harness/auth-boundary-fixture-bootstrap.ts scripts/harness/auth-boundary-fixture-bootstrap.test.ts
+PLANNED / NOT RUN: test "$(git rev-parse :src/middleware.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware.ts)"
+PLANNED / NOT RUN: test "$(git rev-parse :src/lib/auth/state-probe.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/lib/auth/state-probe.ts)"
+PLANNED / NOT RUN: test "$(git rev-parse :src/middleware-auth-state-probe.test.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware-auth-state-probe.test.ts)"
+PLANNED / NOT RUN: test "$(git diff --cached --name-only | LC_ALL=C sort)" = "$(printf '%s\n' scripts/harness/auth-boundary-fixture-bootstrap.test.ts scripts/harness/auth-boundary-fixture-bootstrap.ts src/lib/auth/state-probe.ts src/middleware-auth-state-probe.test.ts src/middleware.ts | LC_ALL=C sort)"
+PLANNED / NOT RUN: git commit -m "test(auth): add immutable F0.1 boundary harness candidate"
+PLANNED / NOT RUN: test "$(git rev-parse HEAD:src/middleware.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware.ts)"
+PLANNED / NOT RUN: test "$(git rev-parse HEAD:src/lib/auth/state-probe.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/lib/auth/state-probe.ts)"
+PLANNED / NOT RUN: test "$(git rev-parse HEAD:src/middleware-auth-state-probe.test.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware-auth-state-probe.test.ts)"
+PLANNED / NOT RUN: F0_1_CANDIDATE_SHA="$(git rev-parse HEAD)"; test -n "$F0_1_CANDIDATE_SHA"; test -z "$(git status --porcelain)"
 PLANNED / NOT RUN: pnpm install --frozen-lockfile
 PLANNED / NOT RUN: pnpm prisma:generate
 PLANNED / NOT RUN: pnpm exec prisma validate --schema=src/prisma/schema.prisma
-PLANNED / NOT RUN: git diff --exit-code 947dcb9535a65f4e8f5211d522b8595381661dbd -- src/prisma/schema.prisma src/prisma/migrations/
+PLANNED / NOT RUN: git diff --exit-code a56039169644997efd2fefa5d09127da791f333b -- src/prisma/schema.prisma src/prisma/migrations/
 PLANNED / NOT RUN: pnpm typecheck
 PLANNED / NOT RUN: pnpm lint
 PLANNED / NOT RUN: pnpm test
 PLANNED / NOT RUN: pnpm exec vitest run src/middleware-auth-state-probe.test.ts
+PLANNED / NOT RUN: git diff --check && git status --short --branch && git rev-parse HEAD
+PLANNED / NOT RUN: verify F0.1 tracked candidate SHA is committed before any preflight/runtime command
+PLANNED / NOT RUN: pnpm exec vitest run scripts/harness/auth-boundary-fixture-bootstrap.test.ts
+PLANNED / NOT RUN: exclusive-create <system-temp>/geo-auth-f0-1-<run-id>/stage-manifest.json at mode 0600 under current-uid-owned mode-0700 run directory; validate contractSha/candidateSha/runId and schema
+PLANNED / NOT RUN: static/local F0.1 fixture-bootstrap preflight with stage-manifest atomic-update/fsync/redacted evidence-retention plus synthetic allowed/denied/lost-event syscall-trace fixtures
+PLANNED / NOT RUN: test -x <PINNED_TRACER_OR_EQUIVALENT> && <PINNED_TRACER_OR_EQUIVALENT> --version # absence/incompatibility is HARNESS_PREFLIGHT_BLOCKED; no fallback
+PLANNED / NOT RUN: docker run --name <F0_1_PG_CONTAINER> --label <TASK_LABEL> --network none <PINNED_PG_IMAGE> <PINNED_TRACER_WRAPPER> -ff -e trace=socket,connect,sendto,sendmsg,sendmmsg -- <CANDIDATE_PG_SUPERVISOR>
+PLANNED / NOT RUN: docker run --name <F0_1_WEB_CONTAINER> --label <TASK_LABEL> --network container:<F0_1_PG_CONTAINER> <PINNED_WEB_IMAGE> <PINNED_TRACER_WRAPPER> -ff -e trace=socket,connect,sendto,sendmsg,sendmmsg -- <CANDIDATE_WEB_SUPERVISOR>
+PLANNED / NOT RUN: docker inspect <F0_1_PG_CONTAINER> <F0_1_WEB_CONTAINER> # require PG NetworkMode=none and web NetworkMode=container:<pg>, with exact task labels
+PLANNED / NOT RUN: <CANDIDATE_WEB_SUPERVISOR> spawns namespace inspection and all three loopback HTTP probes inside its traced tree; require only lo/no external route and no host Next/published port
+PLANNED / NOT RUN: <CANDIDATE_PG_SUPERVISOR> stops only its traced PostgreSQL child for the unavailable row while both containers and the shared namespace remain alive
+PLANNED / NOT RUN: one and only one production web + task-isolated PostgreSQL lifecycle for available, locked/slow timeout, and unavailable HTTP rows, with both syscall tracers active before main-process start through after stop
+PLANNED / NOT RUN: reconcile tracer PID coverage with both cgroup/container PID inventories; require socket/connect/sendto/sendmsg/sendmmsg coverage, zero untraced child, zero syscall/child coverage gap, zero lost event, tracer exit 0, and only AF_UNIX/approved loopback HTTP+PG classifications
+PLANNED / NOT RUN: freeze, fsync, and whitelist/schema-validate §12.1 runtime evidence before resource cleanup
+PLANNED / NOT RUN: clean only exact task-labeled resources, record the actual container/volume/network inventory, and require 0/0/0 for PASS
+PLANNED / NOT RUN: create docs/handoff/AUTH_BOUNDARY_F0_1_RECEIPT_20260904.md after cleanup and bind its redacted evidence plus actual inventory to "$F0_1_CANDIDATE_SHA"
+PLANNED / NOT RUN: git add -- docs/handoff/AUTH_BOUNDARY_F0_1_RECEIPT_20260904.md && test "$(git diff --cached --name-only)" = "docs/handoff/AUTH_BOUNDARY_F0_1_RECEIPT_20260904.md"
+PLANNED / NOT RUN: git commit -m "docs(auth): record F0.1 boundary feasibility receipt"
+PLANNED / NOT RUN: F0_1_RECEIPT_SHA="$(git rev-parse HEAD)"; test "$F0_1_RECEIPT_SHA" != "$F0_1_CANDIDATE_SHA" # report receipt SHA only in handoff/custody, then remove only task-local manifest/run directory
 PLANNED / NOT RUN: pnpm exec vitest run src/middleware.test.ts src/lib/auth/state.test.ts src/lib/api/response.test.ts src/lib/auth/session-refresh.test.ts src/app/api/auth/first-login-change-password/route.test.ts src/app/api/auth/change-password/route.test.ts src/prisma/seed-policy.test.ts src/lib/api/auth-first-login-client.test.ts
 PLANNED / NOT RUN: pnpm exec vitest run tests/e2e/auth-first-login-flow.test.ts
 PLANNED / NOT RUN: pnpm build
-PLANNED / NOT RUN: isolated PostgreSQL + production web runtime smoke proving the selected authoritative gate boundary
+PLANNED / NOT RUN: isolated PostgreSQL + production web runtime smoke proving only the fixed Next 15 Node.js middleware → Prisma AuthStatePort/probe → task-isolated PostgreSQL boundary
 PLANNED / NOT RUN: static scan for secrets and forbidden cross-project imports
 PLANNED / NOT RUN: isolated API/page probes with redirect manual mode, application/json media-type parsing, same-origin Location resolution, and final-path assertions
 PLANNED / NOT RUN: fresh isolated database seed → password change → session refresh → repeat-seed test
@@ -704,6 +991,8 @@ PLANNED / NOT RUN: auth E2E with only isolated PostgreSQL + web, denied external
 
 No command in this list is a release approval. The implementation workers must
 replace each planned item with exact executed evidence in their own handoff.
+This V1.1 document does not itself authorize, schedule, or automatically rerun
+F0/F0.1.
 
 ## 15. Open item: callbackUrl same-origin safety
 
@@ -711,24 +1000,35 @@ The current login client reads `callbackUrl` from the URL and later navigates
 to it. Middleware-generated callback values are path-based, but a caller may
 still supply a cross-origin value unless the login boundary validates it.
 This is an adjacent same-origin/open-redirect concern. It is explicitly **out
-of scope for V1**, must not be opportunistically changed by L1-L5, and remains
+of scope for V1.1**, must not be opportunistically changed by L1-L5, and remains
 an open security task requiring its own contract, tests, lease, and review. It
 is a release-before-ship blocker for any release that exposes the login flow;
 this document must not be read as a complete authentication security sign-off.
 
-The V1 acceptance suite may preserve the existing callback behavior for
+The V1.1 acceptance suite may preserve the existing callback behavior for
 compatibility, but must not claim that callbackUrl security has been solved or
 that the full authentication surface is release-ready.
 
 ## 16. Contract decision and next gate
 
-Decision: approve this document only as the implementation contract for the
-first-login/API boundary. The next action is the unactivated L0 feasibility
-probe; L1 cannot be signed until L0 produces an exact-SHA PASS receipt. Any L0
-FAIL requires contract/lease revision rather than an implicit boundary switch.
-After L1-L5 implementation, independent review must verify F0 and A1-A16, and
-the coordinator must issue a separate acceptance decision.
+Decision: approve this document only as the V1.1 implementation contract for
+the first-login/API boundary. Historical L0 is
+`HARNESS_PREFLIGHT_BLOCKED`; its runtime boundary was not evaluated. L1 remains
+blocked. The next possible action is a separately dispatched F0.1 lease, which
+must branch from the approved V1.1 contract SHA, prove exact `d8e...` probe
+blobs, commit its full candidate SHA, pass static/local fixture-bootstrap
+preflight, and then make one fixed-boundary runtime attempt. After evidence
+freeze and the exact cleanup attempt it must make the mandatory receipt commit.
+This revision does not authorize that dispatch or automatically rerun it.
+
+Only an exact-SHA F0.1 `PASS` may allow the coordinator to consider L1. Either
+`BOUNDARY_FAIL` or `HARNESS_PREFLIGHT_BLOCKED` keeps L1 blocked and requires a
+new coordinator decision; neither outcome permits a route-handler, JWT-only,
+or default-network substitution. After L1-L5 implementation, independent
+review must verify F0 and A1-A16, and the coordinator must issue a separate
+acceptance decision.
 
 Current state remains:
 
-**PROPOSED / NOT IMPLEMENTED / NOT RELEASE APPROVED**
+**PROPOSED / L0 HARNESS_PREFLIGHT_BLOCKED / L1 BLOCKED / NOT IMPLEMENTED /
+NOT RELEASE APPROVED**
