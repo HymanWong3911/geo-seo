@@ -34,7 +34,7 @@
 
 ## 明确未完成
 
-- 本轮未安装依赖、未启动数据库/Redis/web/worker，未执行 unit、E2E、typecheck、lint、Next build 或 Docker build。
+- 本回执创建时未安装依赖、未启动数据库/Redis/web/worker，也未执行 unit、E2E、typecheck、lint、Next build 或 Docker build。接管后的独立可开发基线验证已经完成依赖安装、Prisma generate、typecheck、lint、150 个测试和 Next build；后续证据见 `docs/handoff/IMAC_PRIMARY_BOOTSTRAP_EVIDENCE_20260904.md`。
 - 未对 MacBook snapshot 中的产品行为、migration、真实 provider、发布/发稿或外部副作用做功能验收。
 - 未签署 G1、G2 或任何 release；未部署、未真实发布、未调用付费渠道。
 - 未把 custody 或本治理分支合并到 `main`，也未在本回执创建时 push 本治理分支。
