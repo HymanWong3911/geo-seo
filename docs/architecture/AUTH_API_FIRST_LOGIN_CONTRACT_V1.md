@@ -936,11 +936,11 @@ PLANNED / NOT RUN: test "$(git rev-parse <APPROVED_V1_1_CONTRACT_SHA>^{commit})"
 PLANNED / NOT RUN: git worktree add -b codex/geo-auth-f0-1-<run-id> <F0_1_WORKTREE> <APPROVED_V1_1_CONTRACT_SHA>
 PLANNED / NOT RUN: git restore --source=d8e433d8b469ac459148e9ef5d201d54123dcf92 -- src/middleware.ts src/lib/auth/state-probe.ts src/middleware-auth-state-probe.test.ts
 PLANNED / NOT RUN: test ! -e docs/handoff/AUTH_BOUNDARY_FEASIBILITY_20260904.md # never materialize/cherry-pick the babbda85a3550ed53da301f64c41d00fef7fe76b receipt
-PLANNED / NOT RUN: git diff --exit-code d8e433d8b469ac459148e9ef5d201d54123dcf92 -- src/middleware.ts src/lib/auth/state-probe.ts src/middleware-auth-state-probe.test.ts
 PLANNED / NOT RUN: test "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware.ts)" = "$(git hash-object src/middleware.ts)"
 PLANNED / NOT RUN: test "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/lib/auth/state-probe.ts)" = "$(git hash-object src/lib/auth/state-probe.ts)"
 PLANNED / NOT RUN: test "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware-auth-state-probe.test.ts)" = "$(git hash-object src/middleware-auth-state-probe.test.ts)"
 PLANNED / NOT RUN: git add -- src/middleware.ts src/lib/auth/state-probe.ts src/middleware-auth-state-probe.test.ts scripts/harness/auth-boundary-fixture-bootstrap.ts scripts/harness/auth-boundary-fixture-bootstrap.test.ts
+PLANNED / NOT RUN: git diff --cached --exit-code d8e433d8b469ac459148e9ef5d201d54123dcf92 -- src/middleware.ts src/lib/auth/state-probe.ts src/middleware-auth-state-probe.test.ts
 PLANNED / NOT RUN: test "$(git rev-parse :src/middleware.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware.ts)"
 PLANNED / NOT RUN: test "$(git rev-parse :src/lib/auth/state-probe.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/lib/auth/state-probe.ts)"
 PLANNED / NOT RUN: test "$(git rev-parse :src/middleware-auth-state-probe.test.ts)" = "$(git rev-parse d8e433d8b469ac459148e9ef5d201d54123dcf92:src/middleware-auth-state-probe.test.ts)"
