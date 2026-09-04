@@ -6,6 +6,58 @@
 
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
+import {
+  authStateProbeTimeoutMs,
+  readAuthStateProbe,
+} from "@/lib/auth/state-probe";
+
+const AUTH_STATE_PROBE_PATH = "/api/__auth-state-boundary-feasibility";
+
+function probeRequestIsAuthorized(req: Request): boolean {
+  const expected = process.env.AUTH_STATE_PROBE_KEY;
+  const supplied = req.headers.get("x-auth-state-probe-key");
+  return Boolean(expected && expected.length >= 16 && supplied === expected);
+}
+
+async function handleAuthStateProbe(req: Request): Promise<Response> {
+  if (!probeRequestIsAuthorized(req)) {
+    return NextResponse.json(
+      { data: null, error: { code: "NOT_FOUND", message: "Not found" } },
+      { status: 404, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const userId = req.headers.get("x-auth-state-probe-user-id") ?? "";
+  const result = await readAuthStateProbe({
+    userId,
+    timeoutMs: authStateProbeTimeoutMs(),
+  });
+
+  if (result.status === "unavailable") {
+    return NextResponse.json(
+      {
+        data: null,
+        error: {
+          code: "AUTH_STATE_UNAVAILABLE",
+          message: "Authoritative auth state is unavailable",
+        },
+      },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      data: {
+        found: result.state !== null,
+        active: result.state?.active ?? null,
+        mustChangePassword: result.state?.mustChangePassword ?? null,
+      },
+      error: null,
+    },
+    { status: 200, headers: { "Cache-Control": "no-store" } },
+  );
+}
 
 const PUBLIC_PATHS = [
   "/login",
@@ -25,6 +77,13 @@ function isPublicPath(pathname: string): boolean {
 export default async function middleware(req: Request) {
   const url = new URL(req.url);
   const { pathname } = url;
+
+  if (
+    pathname === AUTH_STATE_PROBE_PATH &&
+    process.env.AUTH_STATE_PROBE_ENABLED === "1"
+  ) {
+    return handleAuthStateProbe(req);
+  }
 
   if (isPublicPath(pathname)) {
     return NextResponse.next();
