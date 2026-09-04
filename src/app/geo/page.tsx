@@ -65,6 +65,7 @@ export default function GeoPage() {
   const [intentFilter, setIntentFilter] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [triggering, setTriggering] = useState(false);
 
   async function load() {
     if (!projectId) { setQuestions([]); return; }
@@ -76,6 +77,28 @@ export default function GeoPage() {
   }
 
   useEffect(() => { void load(); }, [projectId]);
+
+  async function triggerGeoRun() {
+    if (!projectId) return;
+    if (!confirm("确认触发 GEO 监测？这将查询 AI 搜索引擎中品牌的提及情况。")) return;
+    setTriggering(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/geo/runs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sync: true }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        alert("GEO 监测已触发！请去「GEO 运行历史」查看结果。");
+      } else {
+        alert(`触发失败：${json?.error?.message ?? "未知错误"}`);
+      }
+    } catch (e) {
+      alert("触发失败：" + String(e));
+    }
+    setTriggering(false);
+  }
 
   async function toggleActive(q: GeoQuestion) {
     const res = await fetch(`/api/geo/questions/${q.id}`, {
@@ -151,16 +174,25 @@ export default function GeoPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// GEO — Question Bank</div>
-          <h1 className="mt-2">GEO Question Bank</h1>
+          <div className="eyebrow">// GEO — 问题库</div>
+          <h1 className="mt-2">GEO 问题库</h1>
           <p className="text-sm text-muted-foreground mt-1">用户在 AI 搜索引擎里可能问的问题,触发检测看品牌被提及多少次</p>
         </div>
         <div className="page-header-right">
           <ProjectSelector />
           {projectId && (
-            <button onClick={() => setShowAdd(true)} className="btn-primary">
-              + 新建问题
-            </button>
+            <>
+              <button
+                onClick={triggerGeoRun}
+                disabled={triggering || questions.filter(q => q.active).length === 0}
+                className="btn-ghost"
+              >
+                {triggering ? "触发中..." : "🚀 触发监测"}
+              </button>
+              <button onClick={() => setShowAdd(true)} className="btn-primary">
+                + 新建问题
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -187,27 +219,27 @@ export default function GeoPage() {
               {/* KPI */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div className="card p-4">
-                  <div className="eyebrow">total</div>
+                  <div className="eyebrow">总数</div>
                   <div className="metric-number mt-1">{stats.total}</div>
                 </div>
                 <div className="card p-4">
-                  <div className="eyebrow">active</div>
+                  <div className="eyebrow">活跃</div>
                   <div className="metric-number mt-1 text-success">{stats.active}</div>
                   <div className="text-[10px] font-mono text-muted-foreground mt-1">
                     {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%
                   </div>
                 </div>
                 <div className="card p-4">
-                  <div className="eyebrow">inactive</div>
+                  <div className="eyebrow">停用</div>
                   <div className={`metric-number mt-1 ${stats.inactive > 0 ? "text-muted-foreground" : "text-muted-foreground"}`}>{stats.inactive}</div>
                 </div>
                 <div className="card p-4">
-                  <div className="eyebrow">with_keywords</div>
+                  <div className="eyebrow">关联关键词</div>
                   <div className="metric-number mt-1 text-primary">{stats.withKeywords}</div>
                   <div className="text-[10px] font-mono text-muted-foreground mt-1">关联关键词</div>
                 </div>
                 <div className="card p-4">
-                  <div className="eyebrow">urgent · P1</div>
+                  <div className="eyebrow">紧急 · P1</div>
                   <div className={`metric-number mt-1 ${stats.p1 > 0 ? "text-destructive" : "text-muted-foreground"}`}>{stats.p1}</div>
                   <div className="text-[10px] font-mono text-muted-foreground mt-1">紧急</div>
                 </div>
@@ -216,17 +248,17 @@ export default function GeoPage() {
               {/* 可视化区 */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                 <div className="card p-4">
-                  <h3 className="eyebrow mb-3">by_intent</h3>
+                  <h3 className="eyebrow mb-3">按意图分布</h3>
                   <DonutChart
                     segments={intentBreakdown}
-                    centerLabel="intents"
+                    centerLabel="意图"
                     centerValue={intentBreakdown.length}
                     size={120}
                     thickness={14}
                   />
                 </div>
                 <div className="card p-4">
-                  <h3 className="eyebrow mb-3">by_priority</h3>
+                  <h3 className="eyebrow mb-3">按优先级分布</h3>
                   {priorityBreakdown.length > 0 ? (
                     <BarChart data={priorityBreakdown} defaultColor="hsl(var(--primary))" />
                   ) : (
@@ -234,7 +266,7 @@ export default function GeoPage() {
                   )}
                 </div>
                 <div className="card p-4">
-                  <h3 className="eyebrow mb-3">by_locale</h3>
+                  <h3 className="eyebrow mb-3">按语言/地区</h3>
                   {localeBreakdown.length > 0 ? (
                     <BarChart data={localeBreakdown} defaultColor="hsl(var(--info))" />
                   ) : (
@@ -272,7 +304,7 @@ export default function GeoPage() {
                     onChange={e => setIntentFilter(e.target.value)}
                     className="input-field w-44"
                   >
-                    <option value="">all_intents</option>
+                    <option value="">全部意图</option>
                     {INTENTS.map(i => (
                       <option key={i} value={i}>{INTENT_LABEL[i] ?? i}</option>
                     ))}
@@ -285,13 +317,13 @@ export default function GeoPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                      <th className="text-left p-3">question</th>
-                      <th className="text-left p-3 w-32">intent</th>
-                      <th className="text-left p-3 w-24">priority</th>
-                      <th className="text-left p-3 w-32">lang/region</th>
-                      <th className="text-center p-3 w-24">keywords</th>
-                      <th className="text-center p-3 w-28">status</th>
-                      <th className="text-right p-3 w-28">actions</th>
+                      <th className="text-left p-3">问题</th>
+                      <th className="text-left p-3 w-32">意图</th>
+                      <th className="text-left p-3 w-24">优先级</th>
+                      <th className="text-left p-3 w-32">语言/地区</th>
+                      <th className="text-center p-3 w-24">关键词</th>
+                      <th className="text-center p-3 w-28">状态</th>
+                      <th className="text-right p-3 w-28">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -322,7 +354,7 @@ export default function GeoPage() {
                             className={`badge cursor-pointer text-[10px] ${q.active ? "bg-success/15 text-success border border-success/30" : "bg-muted text-muted-foreground border border-border"}`}
                           >
                             <span className={`inline-block h-1.5 w-1.5 rounded-full ${q.active ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
-                            {q.active ? "active" : "inactive"}
+                            {q.active ? "启用" : "停用"}
                           </button>
                         </td>
                         <td className="p-3 text-right">
@@ -396,7 +428,7 @@ function AddQuestionDialog({ projectId, onClose, onAdded }: { projectId: string;
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="eyebrow">// GEO — New Question</div>
+              <div className="eyebrow">// GEO — 新建问题</div>
               <h2 className="mt-1">添加 GEO 问题</h2>
             </div>
             <button onClick={onClose} className="btn-icon">×</button>

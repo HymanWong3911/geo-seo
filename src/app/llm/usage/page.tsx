@@ -86,7 +86,7 @@ export default function LLMUsagePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="// LLM USAGE"
+        eyebrow="// LLM 用量"
         title={"LLM 用量统计"}
         description={"真实渠道调用、用量、成本与分布"}
       >
@@ -148,7 +148,7 @@ export default function LLMUsagePage() {
           </StatGrid>
 
           {/* 每日时间线 */}
-          <DashboardSection eyebrow="// DAILY TIMELINE">
+          <DashboardSection eyebrow="// 每日趋势">
             <div className="border border-border bg-card rounded-lg p-4">
               <div className="text-[10px] font-mono text-muted-foreground mb-3">
                 {stats.daily.length} 天 · {stats.daily.reduce((s, d) => s + d.calls, 0)} 次调用
@@ -226,7 +226,7 @@ export default function LLMUsagePage() {
           </DashboardSection>
 
           {/* 最近调用 */}
-          <DashboardSection eyebrow="// RECENT CALLS">
+          <DashboardSection eyebrow="// 最近调用">
             <div className="border border-border bg-card rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead>

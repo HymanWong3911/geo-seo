@@ -81,7 +81,7 @@ export default function ChannelsPage() {
       {/* 页头 */}
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// SETTINGS — GEO Channels</div>
+          <div className="eyebrow">// 设置 — GEO 渠道</div>
           <h1 className="mt-2">GEO 渠道配置</h1>
         </div>
         <div className="page-header-right">

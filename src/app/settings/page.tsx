@@ -4,7 +4,7 @@ export default function SettingsPage() {
   return (
     <main className="mx-auto max-w-6xl p-6">
       <PageHeader
-        eyebrow="// M18 — Settings"
+        eyebrow="// M18 — 设置"
         title="设置"
         description="修改密码、配置 CMS 集成、管理告警渠道、查看系统信息"
       />

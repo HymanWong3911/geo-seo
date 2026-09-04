@@ -178,7 +178,7 @@ export function SidebarClient({ isAdmin }: { isAdmin: boolean }) {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
             </span>
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              System Online
+              系统在线
             </span>
           </div>
           <span className="font-mono text-[10px] text-muted-foreground/50">v1.0.0</span>

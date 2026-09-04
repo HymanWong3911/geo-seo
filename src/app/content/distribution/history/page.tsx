@@ -223,7 +223,7 @@ export default function DistributionHistoryPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// DISTRIBUTION — History</div>
+          <div className="eyebrow">// 分发历史</div>
           <h1 className="mt-2">分发历史</h1>
         </div>
         <div className="page-header-right">

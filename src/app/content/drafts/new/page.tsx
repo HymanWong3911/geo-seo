@@ -98,7 +98,7 @@ export default function NewDraftPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <header className="page-header">
           <div className="page-header-left">
-            <div className="eyebrow">// CONTENT — New Draft</div>
+            <div className="eyebrow">// 新建草稿</div>
             <h1 className="mt-2">新建内容草稿</h1>
           </div>
           <div className="page-header-right"><ProjectSelector /></div>

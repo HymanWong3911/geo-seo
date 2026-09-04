@@ -104,7 +104,7 @@ export default function SystemHealthPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="// SYSTEM HEALTH"
+        eyebrow="// 系统健康"
         title="系统健康"
         description="实时 worker 队列、LLM 渠道、数据状态"
       >
@@ -154,7 +154,7 @@ export default function SystemHealthPage() {
           </StatGrid>
 
           {/* LLM 渠道 */}
-          <DashboardSection eyebrow="// LLM CHANNELS">
+          <DashboardSection eyebrow="// LLM 渠道">
             <div className="border border-border bg-card rounded-lg p-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {Object.keys(CHANNEL_LABELS).map((c) => {
@@ -201,7 +201,7 @@ export default function SystemHealthPage() {
           </DashboardSection>
 
           {/* 队列详情 */}
-          <DashboardSection eyebrow="// WORKER QUEUES">
+          <DashboardSection eyebrow="// 工作队列">
             <div className="border border-border bg-card rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead>

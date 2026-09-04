@@ -137,7 +137,7 @@ export default function DraftsListPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// CONTENT — Drafts</div>
+          <div className="eyebrow">// 内容草稿</div>
           <h1 className="mt-2">内容草稿</h1>
           <p className="text-sm text-muted-foreground mt-1">AI 生成 + 手动编写 + 诊断改写,所有草稿集中管理</p>
         </div>

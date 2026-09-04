@@ -97,7 +97,7 @@ export default function ReportsPage() {
       {/* page header */}
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// M15 — Reports</div>
+          <div className="eyebrow">// M15 — 报告</div>
           <h1 className="mt-2">Reports</h1>
         </div>
         <div className="page-header-right">
@@ -202,7 +202,7 @@ export default function ReportsPage() {
             <div className="border-b border-border px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="eyebrow">// M15 — Generate Report</div>
+                  <div className="eyebrow">// M15 — 生成报告</div>
                   <h2 className="mt-1">New Report</h2>
                 </div>
                 <button onClick={() => setShowGenerate(false)} className="btn-icon">×</button>

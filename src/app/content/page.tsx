@@ -138,7 +138,7 @@ export default function ContentPage() {
       {/* page header */}
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// M08 — Content Optimization</div>
+          <div className="eyebrow">// M08 — 内容优化</div>
           <h1 className="mt-2">Content Analysis</h1>
         </div>
         <div className="page-header-right">

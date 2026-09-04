@@ -165,7 +165,7 @@ export default function TaskBoardPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <header className="page-header">
           <div className="page-header-left">
-            <div className="eyebrow">// TASKS — Board</div>
+            <div className="eyebrow">// 任务看板</div>
             <h1 className="mt-2">任务看板</h1>
           </div>
           <div className="page-header-right"><ProjectSelector /></div>

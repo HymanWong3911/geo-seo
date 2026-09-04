@@ -149,7 +149,7 @@ export default function GeoRunsPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// GEO — Run History</div>
+          <div className="eyebrow">// GEO — 运行历史</div>
           <h1 className="mt-2">GEO 运行历史</h1>
           <p className="text-sm text-muted-foreground mt-1">查看每次 GEO 检测的运行结果、状态、耗时</p>
         </div>
@@ -188,18 +188,18 @@ export default function GeoRunsPage() {
               <div className="mt-1"><Sparkline data={dailyTrend} color="hsl(var(--primary))" /></div>
             </div>
             <div className="card p-4">
-              <div className="eyebrow">success_rate</div>
+              <div className="eyebrow">成功率</div>
               <div className={`metric-number mt-1 ${stats.successRate >= 80 ? "text-success" : stats.successRate >= 50 ? "text-warning" : "text-destructive"}`}>
                 {stats.successRate}%
               </div>
               <div className="text-[10px] font-mono text-muted-foreground mt-1">{stats.success} / {stats.total}</div>
             </div>
             <div className="card p-4">
-              <div className="eyebrow">running</div>
+              <div className="eyebrow">进行中</div>
               <div className={`metric-number mt-1 ${stats.running > 0 ? "text-info animate-pulse" : "text-muted-foreground"}`}>{stats.running}</div>
             </div>
             <div className="card p-4">
-              <div className="eyebrow">failed</div>
+              <div className="eyebrow">失败</div>
               <div className={`metric-number mt-1 ${stats.failed > 0 ? "text-destructive" : "text-muted-foreground"}`}>{stats.failed}</div>
               <div className="text-[10px] font-mono text-muted-foreground mt-1">+ {stats.partial} 部分失败</div>
             </div>

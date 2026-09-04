@@ -113,7 +113,7 @@ export default function DistributionPage() {
       {/* 页头 */}
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// CONTENT — Distribution</div>
+          <div className="eyebrow">// 内容分发</div>
           <h1 className="mt-2">跨平台分发</h1>
         </div>
         <div className="page-header-right">

@@ -176,7 +176,7 @@ export default function BrandMonitorPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// BRAND — Mention Monitor</div>
+          <div className="eyebrow">// 品牌监控</div>
           <h1 className="mt-2">品牌监控</h1>
           <p className="text-sm text-muted-foreground mt-1">森田咨询 (www.sentian100.com)</p>
         </div>

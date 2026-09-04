@@ -56,7 +56,7 @@ export default function KeywordsPage() {
   useEffect(() => { void load(); }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete(k: Keyword) {
-    if (!confirm(`confirm_delete("${k.text}")?`)) return;
+    if (!confirm(`确认删除关键词「${k.text}」？`)) return;
     const res = await fetch(`/api/keywords/${k.id}`, { method: "DELETE" });
     if (res.ok) void load();
     else {
@@ -70,14 +70,14 @@ export default function KeywordsPage() {
       {/* page header */}
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// M06 — Keywords</div>
-          <h1 className="mt-2">Keywords</h1>
+          <div className="eyebrow">// M06 — 关键词</div>
+          <h1 className="mt-2">关键词</h1>
         </div>
         <div className="page-header-right">
           <ProjectSelector />
           {projectId && (
             <button onClick={() => setShowAdd(true)} className="btn-primary">
-              + new_kw
+              + 添加关键词
             </button>
           )}
         </div>
@@ -86,7 +86,7 @@ export default function KeywordsPage() {
 
       {!projectId ? (
         <div className="empty-state">
-          <span className="status-dot idle" /> select_project_first
+          <span className="status-dot idle" /> 请先选择一个项目
         </div>
       ) : (
         <>
@@ -96,29 +96,29 @@ export default function KeywordsPage() {
               <span className="input-field-icon">›</span>
               <input
                 type="search"
-                placeholder="search keywords..."
+                placeholder="搜索关键词..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void load(); }}
               />
             </div>
-            <button onClick={() => void load()} className="btn-ghost btn-sm">search</button>
-            <button onClick={() => setShowImport(true)} className="btn-ghost btn-sm">import_csv</button>
+            <button onClick={() => void load()} className="btn-ghost btn-sm">搜索</button>
+            <button onClick={() => setShowImport(true)} className="btn-ghost btn-sm">导入CSV</button>
           </div>
 
           {/* 统计摘要 */}
           {!loading && keywords.length > 0 && (
             <div className="mb-6 grid grid-cols-3 gap-px bg-border">
               <div className="cell">
-                <div className="eyebrow">total</div>
+                <div className="eyebrow">总数</div>
                 <div className="metric-number-sm mt-1">{keywords.length}</div>
               </div>
               <div className="cell">
-                <div className="eyebrow">high_priority</div>
+                <div className="eyebrow">高优先级</div>
                 <div className="metric-number-sm mt-1">{keywords.filter(k => k.priority <= 2).length}</div>
               </div>
               <div className="cell">
-                <div className="eyebrow">avg_difficulty</div>
+                <div className="eyebrow">平均难度</div>
                 <div className="metric-number-sm mt-1">
                   {keywords.filter(k => k.difficulty != null).length > 0
                     ? Math.round(keywords.reduce((s, k) => s + (k.difficulty ?? 0), 0) / keywords.filter(k => k.difficulty != null).length)
@@ -133,19 +133,19 @@ export default function KeywordsPage() {
             <SkeletonTable rows={6} />
           ) : keywords.length === 0 ? (
             <div className="empty-state">
-              [ no_keywords ] — add keywords to track
+              [ 暂无关键词 ] — 添加关键词以开始跟踪
             </div>
           ) : (
             <div className="border border-border">
               <table>
                 <thead>
                   <tr>
-                    <th>keyword</th>
-                    <th>intent</th>
-                    <th className="w-20">priority</th>
-                    <th>lang/region</th>
-                    <th>target_url</th>
-                    <th className="w-24">actions</th>
+                    <th>关键词</th>
+                    <th>意图</th>
+                    <th className="w-20">优先级</th>
+                    <th>语言/地区</th>
+                    <th>目标URL</th>
+                    <th className="w-24">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -243,25 +243,25 @@ function AddKeywordDialog({ projectId, onClose, onAdded }: { projectId: string; 
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="eyebrow">// M06 — New Keyword</div>
-              <h2 className="mt-1">Add Keyword</h2>
+              <div className="eyebrow">// M06 — 新建关键词</div>
+              <h2 className="mt-1">添加关键词</h2>
             </div>
             <button onClick={onClose} className="btn-icon">×</button>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label className="mono-line block mb-2">keyword *</label>
+            <label className="mono-line block mb-2">关键词 *</label>
             <div className="input-field">
               <span className="input-field-icon">›</span>
               <input type="text" required value={form.text}
                 onChange={(e) => setForm({ ...form, text: e.target.value })}
-                placeholder="SEO optimization tool" autoFocus />
+                placeholder="输入关键词，如：企业管理咨询" autoFocus />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mono-line block mb-2">intent</label>
+              <label className="mono-line block mb-2">搜索意图</label>
               <div className="input-field">
                 <span className="input-field-icon">›</span>
                 <select value={form.intent}
@@ -271,7 +271,7 @@ function AddKeywordDialog({ projectId, onClose, onAdded }: { projectId: string; 
               </div>
             </div>
             <div>
-              <label className="mono-line block mb-2">priority (1-5)</label>
+              <label className="mono-line block mb-2">优先级 (1-5)</label>
               <div className="input-field">
                 <span className="input-field-icon">›</span>
                 <input type="number" min={1} max={5} value={form.priority}
@@ -280,7 +280,7 @@ function AddKeywordDialog({ projectId, onClose, onAdded }: { projectId: string; 
             </div>
           </div>
           <div>
-            <label className="mono-line block mb-2">target_url (optional)</label>
+            <label className="mono-line block mb-2">目标URL (可选)</label>
             <div className="input-field">
               <span className="input-field-icon">›</span>
               <input type="url" value={form.targetUrl}
@@ -294,9 +294,9 @@ function AddKeywordDialog({ projectId, onClose, onAdded }: { projectId: string; 
             </div>
           )}
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <button type="button" onClick={onClose} className="btn-ghost btn-sm">cancel</button>
+            <button type="button" onClick={onClose} className="btn-ghost btn-sm">取消</button>
             <button type="submit" disabled={loading} className="btn-primary btn-sm">
-              {loading ? "creating..." : "create →"}
+              {loading ? "创建中..." : "创建 →"}
             </button>
           </div>
         </form>
@@ -334,18 +334,18 @@ keyword research,INFORMATIONAL,3`);
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="eyebrow">// M06 — Bulk Import</div>
-              <h2 className="mt-1">Import Keywords</h2>
+              <div className="eyebrow">// M06 — 批量导入</div>
+              <h2 className="mt-1">导入关键词</h2>
             </div>
             <button onClick={onClose} className="btn-icon">×</button>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="rounded border border-border bg-card p-3 font-mono text-[10px] text-muted-foreground leading-relaxed">
-            csv_format :: text (required), intent (optional), priority 1-5 (optional, default 3)
+            CSV格式：text (必填), intent (可选), priority 1-5 (可选，默认3)
           </div>
           <div>
-            <label className="mono-line block mb-2">csv_data</label>
+            <label className="mono-line block mb-2">CSV数据</label>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -360,9 +360,9 @@ keyword research,INFORMATIONAL,3`);
             </div>
           )}
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <button type="button" onClick={onClose} className="btn-ghost btn-sm">cancel</button>
+            <button type="button" onClick={onClose} className="btn-ghost btn-sm">取消</button>
             <button type="submit" disabled={loading} className="btn-primary btn-sm">
-              {loading ? "importing..." : "import →"}
+              {loading ? "导入中..." : "导入 →"}
             </button>
           </div>
         </form>

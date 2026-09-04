@@ -178,7 +178,7 @@ export default function UIShowcasePage() {
             </div>
 
             {/* 数据统计卡片 */}
-            <DashboardSection eyebrow="// CORE METRICS" title="数据统计卡片">
+            <DashboardSection eyebrow="// 核心指标" title="数据统计卡片">
               <StatGrid cols={4}>
                 <StatCard
                   label="GEO 评分"
@@ -229,7 +229,7 @@ export default function UIShowcasePage() {
             </DashboardSection>
 
             {/* 进度条 & 状态指示 */}
-            <DashboardSection eyebrow="// COMPONENTS" title="进度条 & 状态指示">
+            <DashboardSection eyebrow="// 组件" title="进度条 & 状态指示">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -278,7 +278,7 @@ export default function UIShowcasePage() {
             </DashboardSection>
 
             {/* 数据表格 */}
-            <DashboardSection eyebrow="// DATA" title="高级数据表格">
+            <DashboardSection eyebrow="// 数据" title="高级数据表格">
               <Card>
                 <CardContent className="pt-6">
                   <DataTable 
@@ -341,7 +341,7 @@ export default function UIShowcasePage() {
             </DashboardSection>
 
             {/* 快捷入口 */}
-            <DashboardSection eyebrow="// QUICK" title="快捷入口">
+            <DashboardSection eyebrow="// 快捷" title="快捷入口">
               <QuickActionGrid cols={2}>
                 <QuickAction
                   title="页面诊断"

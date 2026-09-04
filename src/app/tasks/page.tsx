@@ -21,11 +21,11 @@ interface Task {
 }
 
 const STATUS_LABEL: Record<Task["status"], string> = {
-  TODO: "todo",
-  DOING: "doing",
-  REVIEW: "review",
-  DONE: "done",
-  IGNORED: "ignored",
+  TODO: "待办",
+  DOING: "进行中",
+  REVIEW: "审核中",
+  DONE: "已完成",
+  IGNORED: "已忽略",
 };
 
 const STATUS_BADGE: Record<Task["status"], string> = {
@@ -77,7 +77,7 @@ export default function TasksPage() {
   }
 
   async function deleteTask(t: Task) {
-    if (!confirm(`confirm_delete("${t.title}")?`)) return;
+    if (!confirm(`确认删除任务「${t.title}」？`)) return;
     const res = await fetch(`/api/tasks/${t.id}`, { method: "DELETE" });
     if (res.ok) void load();
   }
@@ -92,12 +92,12 @@ export default function TasksPage() {
       {/* page header */}
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// M14 — Task Queue</div>
-          <h1 className="mt-2">Tasks</h1>
+          <div className="eyebrow">// M14 — 优化任务</div>
+          <h1 className="mt-2">优化任务</h1>
         </div>
         <div className="page-header-right">
           <button onClick={() => setShowNew(true)} className="btn-primary">
-            + new_task
+            + 新建任务
           </button>
         </div>
       </header>
@@ -110,7 +110,7 @@ export default function TasksPage() {
             onClick={() => setStatusFilter("")}
             className={`cell text-left transition-colors hover:bg-card ${!statusFilter ? "border-b-2 border-primary" : ""}`}
           >
-            <div className="eyebrow">all</div>
+            <div className="eyebrow">全部</div>
             <div className="metric-number-sm mt-1">{tasks.length}</div>
           </button>
           {STATUSES.map((s) => (
@@ -138,11 +138,11 @@ export default function TasksPage() {
           <table>
             <thead>
               <tr>
-                <th>task</th>
-                <th>project</th>
-                <th className="w-16">priority</th>
-                <th className="w-32">status</th>
-                <th className="w-24">actions</th>
+                <th>任务</th>
+                <th>项目</th>
+                <th className="w-16">优先级</th>
+                <th className="w-32">状态</th>
+                <th className="w-24">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -246,15 +246,15 @@ function NewTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="eyebrow">// M14 — New Task</div>
-              <h2 className="mt-1">Create Task</h2>
+              <div className="eyebrow">// M14 — 新建任务</div>
+              <h2 className="mt-1">创建任务</h2>
             </div>
             <button onClick={onClose} className="btn-icon">×</button>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label className="mono-line block mb-2">project_id *</label>
+            <label className="mono-line block mb-2">项目ID *</label>
             <div className="input-field">
               <span className="input-field-icon">›</span>
               <input type="text" required value={form.projectId}
@@ -263,7 +263,7 @@ function NewTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
             </div>
           </div>
           <div>
-            <label className="mono-line block mb-2">title *</label>
+            <label className="mono-line block mb-2">标题 *</label>
             <div className="input-field">
               <span className="input-field-icon">›</span>
               <input type="text" required value={form.title}
@@ -272,7 +272,7 @@ function NewTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
             </div>
           </div>
           <div>
-            <label className="mono-line block mb-2">description</label>
+            <label className="mono-line block mb-2">描述</label>
             <div className="input-field">
               <span className="input-field-icon">›</span>
               <textarea value={form.description}
@@ -282,7 +282,7 @@ function NewTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mono-line block mb-2">url</label>
+              <label className="mono-line block mb-2">URL</label>
               <div className="input-field">
                 <span className="input-field-icon">›</span>
                 <input type="url" value={form.url}
@@ -291,7 +291,7 @@ function NewTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
               </div>
             </div>
             <div>
-              <label className="mono-line block mb-2">priority (1-5)</label>
+              <label className="mono-line block mb-2">优先级 (1-5)</label>
               <div className="input-field">
                 <span className="input-field-icon">›</span>
                 <select value={form.priority}
@@ -307,9 +307,9 @@ function NewTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
             </div>
           )}
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <button type="button" onClick={onClose} className="btn-ghost btn-sm">cancel</button>
+            <button type="button" onClick={onClose} className="btn-ghost btn-sm">取消</button>
             <button type="submit" disabled={loading} className="btn-primary btn-sm">
-              {loading ? "creating..." : "create →"}
+              {loading ? "创建中..." : "创建 →"}
             </button>
           </div>
         </form>

@@ -137,7 +137,7 @@ export default function DashboardPage() {
       {/* 页头 */}
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// M01 — CONTROL CENTER</div>
+          <div className="eyebrow">// M01 — 控制中心</div>
           <h1 className="mt-2">控制台</h1>
         </div>
         <div className="page-header-right">
@@ -155,7 +155,7 @@ export default function DashboardPage() {
       <SystemHealthWidget />
 
       {/* 核心指标 */}
-      <DashboardSection eyebrow="// CORE METRICS">
+      <DashboardSection eyebrow="// 核心指标">
         <StatGrid cols={4}>
           <StatCard
             label="GEO 评分"
@@ -189,7 +189,7 @@ export default function DashboardPage() {
       </DashboardSection>
 
       {/* 业务面板：分发 + 内容 + 任务 + 品牌 */}
-      <DashboardSection eyebrow="// OPERATIONS">
+      <DashboardSection eyebrow="// 运营">
         <div className="grid grid-cols-4 gap-px bg-border">
           {/* 分发 */}
           <div className="bg-card p-5 space-y-3">
@@ -355,7 +355,7 @@ export default function DashboardPage() {
       {/* AI 洞察速览 */}
       {insights && (
         <DashboardSection
-          eyebrow="// AI INSIGHTS"
+          eyebrow="// AI 洞察"
           title="🤖 AI 洞察速览"
           className="col-span-1"
         >
@@ -392,7 +392,7 @@ export default function DashboardPage() {
       {/* 最近诊断 + 快捷入口 */}
 
       <div className="grid grid-cols-3 gap-6">
-        <DashboardSection eyebrow="// RECENT AUDITS" title="最近诊断" className="col-span-2">
+        <DashboardSection eyebrow="// 最近诊断" title="最近诊断" className="col-span-2">
           <div className="space-y-2">
             {loading ? (
               <div className="text-muted-foreground font-mono text-xs">加载中...</div>
@@ -425,7 +425,7 @@ export default function DashboardPage() {
           </div>
         </DashboardSection>
 
-        <DashboardSection eyebrow="// QUICK ACCESS" title="快捷入口" className="col-span-1">
+        <DashboardSection eyebrow="// 快捷入口" title="快捷入口" className="col-span-1">
           <QuickActionGrid cols={1}>
             <QuickAction title="页面诊断" description="对网站页面进行 SEO 诊断" icon="🔍" href="/audits" />
             <QuickAction title="关键词管理" description="管理跟踪的关键词" icon="📊" href="/keywords" />

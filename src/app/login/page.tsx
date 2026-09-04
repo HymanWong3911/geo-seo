@@ -221,7 +221,7 @@ export default function LoginPage() {
 
           {/* 标题 */}
           <div className="mb-12">
-            <h1 className="text-3xl tracking-tight">登录 / Sign in</h1>
+            <h1 className="text-3xl tracking-tight">登录</h1>
             <div className="mt-2 font-mono text-xs text-muted-foreground">
               → continue to operations dashboard
             </div>

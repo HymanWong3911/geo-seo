@@ -110,7 +110,7 @@ export default function ReviewQueuePage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// CONTENT — Review Queue</div>
+          <div className="eyebrow">// 内容审核</div>
           <h1 className="mt-2">审核队列</h1>
           <p className="text-sm text-muted-foreground mt-1">所有项目里待审的内容,按提交时间倒序排列</p>
         </div>

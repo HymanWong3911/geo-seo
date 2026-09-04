@@ -137,12 +137,12 @@ export default function AuditsPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="page-header">
         <div className="page-header-left">
-          <div className="eyebrow">// SEO — Page Audits</div>
-          <h1 className="mt-2">SEO 审计</h1>
-          <p className="text-sm text-muted-foreground mt-1">输入 URL,系统自动抓取页面 + 评分 + 问题清单</p>
+          <div className="eyebrow">// SEO — 页面诊断</div>
+          <h1 className="mt-2">SEO 诊断</h1>
+          <p className="text-sm text-muted-foreground mt-1">输入 URL，系统自动抓取页面 + 评分 + 问题清单</p>
         </div>
         <div className="page-header-right">
-          <button onClick={() => setShowNew(true)} className="btn-primary">+ 新建审计</button>
+          <button onClick={() => setShowNew(true)} className="btn-primary">+ 新建诊断</button>
         </div>
       </header>
 
@@ -151,16 +151,8 @@ export default function AuditsPage() {
           {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-24" />)}
         </div>
       ) : audits.length === 0 ? (
-        <EmptyState
-          icon="🔍"
-          title="还没有审计记录"
-          description="点击右上角「新建审计」,输入 URL 开始第一次诊断"
-          action={
-            <button onClick={() => setShowNew(true)} className="btn-primary">
-              + 新建审计
-            </button>
-          }
-        />
+        <div className="empty-state">
+          <span className="status-dot idle" /> 暂无诊断记录，点击右上角新建</div>
       ) : (
         <>
           {/* KPI */}
@@ -299,8 +291,8 @@ export default function AuditsPage() {
           <form onSubmit={handleSubmit} className="dialog-panel p-8 space-y-6">
             <div className="flex items-center justify-between border-b border-border pb-4">
               <div>
-                <div className="eyebrow">// SEO — New Diagnostic</div>
-                <h2 className="mt-2 text-lg">新建审计</h2>
+                <div className="eyebrow">// SEO — 新建诊断</div>
+                <h2 className="mt-2 text-lg">新建页面诊断</h2>
               </div>
               <button type="button" onClick={() => { setShowNew(false); setResult(null); }} className="btn-icon">×</button>
             </div>
@@ -329,7 +321,7 @@ export default function AuditsPage() {
                   className="flex-1 bg-transparent outline-none text-sm"
                   placeholder="https://example.com/page" />
               </div>
-              <div className="mt-1 text-[10px] font-mono text-muted-foreground">将同步抓取 + 分析,通常 5-15 秒</div>
+              <div className="mt-1 text-[10px] font-mono text-muted-foreground">将同步抓取 + 分析，通常 5-15 秒</div>
             </div>
             {result && (
               <div className={`border px-3 py-2 font-mono text-xs ${
@@ -343,7 +335,7 @@ export default function AuditsPage() {
             <div className="flex justify-end gap-2 border-t border-border pt-4">
               <button type="button" onClick={() => { setShowNew(false); setResult(null); }} className="btn-ghost">取消</button>
               <button type="submit" disabled={submitting} className="btn-primary">
-                {submitting ? "扫描中..." : "开始审计 →"}
+                {submitting ? "扫描中..." : "开始诊断 →"}
               </button>
             </div>
           </form>

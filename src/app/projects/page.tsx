@@ -43,7 +43,7 @@ export default function ProjectsPage() {
   }, [showArchived, session?.user?.id]);
 
   async function archive(id: string) {
-    if (!confirm("archive this project?")) return;
+    if (!confirm("确认归档此项目？")) return;
     const res = await fetch(`/api/projects/${id}/archive`, { method: "POST" });
     if (res.ok) void load();
   }
@@ -61,7 +61,7 @@ export default function ProjectsPage() {
   }
 
   async function batchArchive() {
-    if (!confirm(`archive ${selected.length} projects?`)) return;
+    if (!confirm(`确认归档选中的 ${selected.length} 个项目？`)) return;
     const res = await fetch("/api/projects/batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -94,8 +94,8 @@ export default function ProjectsPage() {
       {/* 页头 */}
       <header className="mb-8 flex items-end justify-between gap-4 border-b border-border pb-4">
         <div>
-          <div className="eyebrow">// M02 — Project List</div>
-          <h1 className="mt-2 text-2xl tracking-tight">Projects</h1>
+          <div className="eyebrow">// M02 — 项目列表</div>
+          <h1 className="mt-2 text-2xl tracking-tight">项目</h1>
         </div>
         <div className="flex items-center gap-4 shrink-0">
           <label className="flex cursor-pointer items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
@@ -105,10 +105,10 @@ export default function ProjectsPage() {
               onChange={(e) => setShowArchived(e.target.checked)}
               className="h-3 w-3"
             />
-            <span>show archived</span>
+            <span>显示已归档</span>
           </label>
           {isAdmin && (
-            <Link href="/projects/new" className="btn-primary">+ new</Link>
+            <Link href="/projects/new" className="btn-primary">+ 新建</Link>
           )}
         </div>
       </header>
@@ -121,12 +121,12 @@ export default function ProjectsPage() {
             <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.15em]">
               {selected.length > 0 && (
                 <span className="border border-background/30 px-2 py-0.5">
-                  selected · {selected.length}
+                  已选 · {selected.length}
                 </span>
               )}
               {compareIds.length > 0 && (
                 <span className="border border-background/30 px-2 py-0.5">
-                  compare · {compareIds.length}
+                  对比 · {compareIds.length}
                 </span>
               )}
             </div>
@@ -134,17 +134,17 @@ export default function ProjectsPage() {
               {selected.length > 0 && (
                 <>
                   <button onClick={() => batchExport("keywords")} className="border border-background/30 px-2 py-1 hover:bg-background/10">
-                    export kw
+                    导出关键词
                   </button>
                   <button onClick={() => batchExport("tasks")} className="border border-background/30 px-2 py-1 hover:bg-background/10">
-                    export task
+                    导出任务
                   </button>
                   <button onClick={() => batchExport("brands")} className="border border-background/30 px-2 py-1 hover:bg-background/10">
-                    export brand
+                    导出品牌
                   </button>
                   {isAdmin && (
                     <button onClick={batchArchive} className="border border-background/30 px-2 py-1 hover:bg-background/10">
-                      archive
+                      归档
                     </button>
                   )}
                 </>
@@ -158,7 +158,7 @@ export default function ProjectsPage() {
                 onClick={() => { setSelected([]); setCompareIds([]); }}
                 className="border border-background/30 px-2 py-1 hover:bg-background/10"
               >
-                clear
+                清空
               </button>
             </div>
           </div>
@@ -167,11 +167,11 @@ export default function ProjectsPage() {
 
       {loading ? (
         <div className="border border-border p-12 text-center font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground">
-          <span className="status-dot idle" /> loading
+          <span className="status-dot idle" /> 加载中
         </div>
       ) : projects.length === 0 ? (
         <div className="border border-border p-12 text-center font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground">
-          [ {showArchived ? "no archived" : "no active"} projects ]
+          [ {showArchived ? "暂无已归档" : "暂无活跃"} 项目 ]
         </div>
       ) : (
         <div className="border border-border">
@@ -179,13 +179,13 @@ export default function ProjectsPage() {
             <thead>
               <tr>
                 <th className="w-16"></th>
-                <th>//id</th>
-                <th>name</th>
-                <th>domain</th>
-                <th>primary brand</th>
-                <th className="w-28">channels</th>
-                <th className="w-28">status</th>
-                <th className="w-20">actions</th>
+                <th>//ID</th>
+                <th>名称</th>
+                <th>域名</th>
+                <th>主品牌</th>
+                <th className="w-28">渠道</th>
+                <th className="w-28">状态</th>
+                <th className="w-20">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -248,14 +248,14 @@ export default function ProjectsPage() {
                           href={`/projects/${p.id}/health`}
                           className="text-foreground hover:text-primary"
                         >
-                          health
+                          健康度
                         </Link>
                         <span className="text-muted-foreground/30">/</span>
                         <Link
                           href={`/projects/${p.id}/settings`}
                           className="text-foreground hover:text-primary"
                         >
-                          set
+                          设置
                         </Link>
                         {p.status === "ACTIVE" && isAdmin && (
                           <>
@@ -264,7 +264,7 @@ export default function ProjectsPage() {
                               onClick={() => void archive(p.id)}
                               className="text-muted-foreground hover:text-foreground"
                             >
-                              arch
+                              归档
                             </button>
                           </>
                         )}
